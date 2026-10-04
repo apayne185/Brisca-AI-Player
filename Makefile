@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install lint format typecheck test cov bench check build clean
+.PHONY: help install lint format typecheck test test-slow cov bench check build clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -21,6 +21,9 @@ typecheck: ## Static type checking
 
 test: ## Run the test suite
 	uv run pytest
+
+test-slow: ## Run slow agent-strength tests
+	uv run pytest -m slow
 
 cov: ## Run tests with coverage
 	uv run pytest --cov --cov-report=term-missing --cov-report=xml
