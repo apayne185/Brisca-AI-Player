@@ -28,8 +28,8 @@ squash-merged once CI is green.
 - **Types**: the package is checked with `mypy --strict`.
 - **Tests**: new behaviour needs tests; coverage must stay at or above 90%.
   Prefer property-based tests (`hypothesis`) for game-rule invariants.
-- **Reproducibility**: anything stochastic takes an explicit seed or
-  `numpy.random.Generator`. No global random state.
+- **Reproducibility**: anything stochastic takes an explicit seed or generator
+  (`random.Random` in the engine). No global random state.
 - **Results**: any reported metric states the number of games, the seeds and a
   confidence interval.
 
