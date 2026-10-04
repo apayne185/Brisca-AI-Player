@@ -33,6 +33,9 @@ def test_match_plays_each_deal_from_both_seats() -> None:
     result = play_match(GreedyAgent(), RandomAgent(seed=0), deals=25, seed=0)
     assert result.games == 50
     assert result.points_for + result.points_against == 50 * 120
+    assert len(result.deal_scores) == 25
+    assert set(result.deal_scores) <= {0.0, 0.25, 0.5, 0.75, 1.0}
+    assert sum(result.deal_scores) / 25 == pytest.approx(result.score)
 
 
 def test_duplicate_match_between_identical_deterministic_agents_is_even() -> None:
