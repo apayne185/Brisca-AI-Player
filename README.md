@@ -30,39 +30,45 @@ make check     # lint, strict type checking and tests, exactly as CI runs them
 ## Leaderboard
 
 Round robin between every agent: 100 duplicate deals per pairing (200 games),
-the same deals for every pairing, 3,000 games in total.
+the same deals for every pairing, 5,600 games in total.
 
 <!-- leaderboard:start -->
 Bradley-Terry ratings on the Elo scale, anchored at `random` = 0, with 95% bootstrap intervals from resampling deals.
 
 | Rank | Agent | Elo | 95% CI | Score | Avg points | ms / move |
 | ---: | --- | ---: | :---: | ---: | ---: | ---: |
-| 1 | `ismcts` | +428 | [+395, +471] | 0.681 | 63.5 | 254.84 |
-| 2 | `alphabeta` | +400 | [+367, +439] | 0.640 | 68.1 | 81.56 |
-| 3 | `heuristic` | +357 | [+320, +395] | 0.574 | 63.9 | 0.01 |
-| 4 | `ppo-v1` | +314 | [+281, +352] | 0.508 | 62.6 | 6.74 |
-| 5 | `greedy` | +297 | [+263, +336] | 0.483 | 61.7 | 0.01 |
-| 6 | `random` | +0 | [+0, +0] | 0.114 | 40.2 | 0.00 |
+| 1 | `ismcts` | +410 | [+379, +443] | 0.651 | 62.0 | 240.00 |
+| 2 | `alphabeta` | +395 | [+368, +426] | 0.629 | 66.7 | 78.84 |
+| 3 | `heuristic` | +344 | [+313, +378] | 0.552 | 62.8 | 0.01 |
+| 4 | `heuristic-tuned` | +342 | [+312, +373] | 0.549 | 63.1 | 0.01 |
+| 5 | `ppo-v2` | +337 | [+309, +370] | 0.543 | 62.9 | 8.98 |
+| 6 | `ppo-v1` | +310 | [+280, +340] | 0.502 | 61.5 | 6.02 |
+| 7 | `greedy` | +278 | [+247, +311] | 0.453 | 60.3 | 0.01 |
+| 8 | `random` | +0 | [+0, +0] | 0.121 | 40.7 | 0.00 |
 
 Head-to-head score of the row agent against the column agent (± half-width of the 95% Wilson interval):
 
-| | `ismcts` | `alphabeta` | `heuristic` | `ppo-v1` | `greedy` | `random` |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: |
-| `ismcts` | - | 0.56 ± 0.07 | 0.56 ± 0.07 | 0.70 ± 0.06 | 0.66 ± 0.07 | 0.93 ± 0.04 |
-| `alphabeta` | 0.44 ± 0.07 | - | 0.56 ± 0.07 | 0.64 ± 0.07 | 0.63 ± 0.07 | 0.92 ± 0.04 |
-| `heuristic` | 0.44 ± 0.07 | 0.44 ± 0.07 | - | 0.54 ± 0.07 | 0.58 ± 0.07 | 0.88 ± 0.05 |
-| `ppo-v1` | 0.30 ± 0.06 | 0.36 ± 0.07 | 0.46 ± 0.07 | - | 0.57 ± 0.07 | 0.85 ± 0.05 |
-| `greedy` | 0.34 ± 0.07 | 0.37 ± 0.07 | 0.42 ± 0.07 | 0.43 ± 0.07 | - | 0.85 ± 0.05 |
-| `random` | 0.07 ± 0.04 | 0.08 ± 0.04 | 0.12 ± 0.05 | 0.15 ± 0.05 | 0.15 ± 0.05 | - |
+| | `ismcts` | `alphabeta` | `heuristic` | `heuristic-tuned` | `ppo-v2` | `ppo-v1` | `greedy` | `random` |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `ismcts` | - | 0.56 ± 0.07 | 0.56 ± 0.07 | 0.57 ± 0.07 | 0.58 ± 0.07 | 0.70 ± 0.06 | 0.66 ± 0.07 | 0.93 ± 0.04 |
+| `alphabeta` | 0.44 ± 0.07 | - | 0.56 ± 0.07 | 0.60 ± 0.07 | 0.60 ± 0.07 | 0.64 ± 0.07 | 0.63 ± 0.07 | 0.92 ± 0.04 |
+| `heuristic` | 0.44 ± 0.07 | 0.44 ± 0.07 | - | 0.48 ± 0.07 | 0.52 ± 0.07 | 0.54 ± 0.07 | 0.58 ± 0.07 | 0.88 ± 0.05 |
+| `heuristic-tuned` | 0.43 ± 0.07 | 0.40 ± 0.07 | 0.52 ± 0.07 | - | 0.49 ± 0.07 | 0.54 ± 0.07 | 0.61 ± 0.07 | 0.86 ± 0.05 |
+| `ppo-v2` | 0.42 ± 0.07 | 0.40 ± 0.07 | 0.48 ± 0.07 | 0.51 ± 0.07 | - | 0.49 ± 0.07 | 0.64 ± 0.07 | 0.86 ± 0.05 |
+| `ppo-v1` | 0.30 ± 0.06 | 0.36 ± 0.07 | 0.46 ± 0.07 | 0.46 ± 0.07 | 0.51 ± 0.07 | - | 0.57 ± 0.07 | 0.85 ± 0.05 |
+| `greedy` | 0.34 ± 0.07 | 0.37 ± 0.07 | 0.42 ± 0.07 | 0.39 ± 0.07 | 0.36 ± 0.07 | 0.43 ± 0.07 | - | 0.85 ± 0.05 |
+| `random` | 0.07 ± 0.04 | 0.08 ± 0.04 | 0.12 ± 0.05 | 0.14 ± 0.05 | 0.14 ± 0.05 | 0.15 ± 0.05 | 0.15 ± 0.05 | - |
 <!-- leaderboard:end -->
 
 **Takeaways.** Search wins: ISMCTS is the strongest agent and beats every
 other agent head to head, with determinized alpha-beta close behind. But the
 rule-based heuristic is within about 70 Elo of the top while being roughly
 10,000× cheaper per move, which makes it the obvious choice wherever latency
-or cost matters. The PPO agent sits between greedy and heuristic. Closing that
-gap is the goal of Phase 4. (Timings were measured with seven games running in
-parallel, so absolute milliseconds are inflated; the ratios hold.)
+or cost matters. Tuning moved PPO from below the heuristic (`ppo-v1`) to level
+with it (`ppo-v2`), while the tuned heuristic is indistinguishable from the
+hand-set defaults, which is consistent with its held-out validation below.
+(Timings were measured with seven games running in parallel, so absolute
+milliseconds are inflated; the ratios hold.)
 
 Reproduce with `make tournament && make leaderboard`. Games are stored in DuckDB
 (`results/brisca.duckdb`) and analysed in SQL; the raw games are published as
@@ -155,9 +161,9 @@ each opponent, with 95% confidence intervals:
 | greedy | 0.534 ± 0.031 | 0.546 ± 0.031 |
 | heuristic | 0.444 ± 0.031 | 0.442 ± 0.031 |
 
-PPO comfortably beats random play and edges past the greedy agent, but it does
-not yet beat the hand-tuned heuristic. Phase 4 adds systematic hyperparameter
-search and experiment tracking to close that gap.
+With default hyperparameters (`ppo-v1`), PPO comfortably beats random play and
+edges past the greedy agent, but not the hand-written heuristic. Tuned
+hyperparameters (`ppo-v2`, see below) bring it level with the heuristic.
 
 **What made it learn.** The first version stayed at random-level play however
 it was tuned. Driving the environment with the greedy agent reproduced the
@@ -167,6 +173,49 @@ beats which from scratch. Adding two relational feature planes, *trump suit*
 and *cards that beat the current trick*, took the agent from 0.52 to 0.74
 against random within 100k steps. The shared per-card head (`--card-head`)
 learns faster early on but converges to the same strength.
+
+## Experiment tracking, tuning and the model registry
+
+With the `mlops` extra (`pip install 'brisca[rl,mlops]'`), every training run is
+tracked in MLflow: its config, learning curves and git commit, plus the trained
+policy, logged as an MLflow pyfunc model with an explicit tensor signature so it
+can be served as is.
+
+```bash
+brisca tune heuristic --trials 200 --workers 2 --out configs/heuristic-tuned.toml
+brisca tune ppo --trials 24 --workers 5 --steps 400000 --out configs/ppo-tuned.toml
+brisca-train --config configs/ppo-tuned.toml --total-steps 3000000 --register
+mlflow ui --backend-store-uri sqlite:///mlflow.db                 # browse runs
+```
+
+**Champion gate.** `--register` (or `brisca promote <model or checkpoint>`)
+registers the candidate as a new version of `brisca-ppo`. Candidate and
+`@champion` then play the same 300 duplicate deals against a fixed reference
+panel (greedy and heuristic), and the champion alias moves only if the
+candidate does better on significantly more deals than it does worse (exact
+one-sided paired sign test, α = 0.05). Rejected versions stay in the registry,
+tagged with their evaluation, so every decision can be audited.
+
+**What tuning found, and what it didn't.**
+
+- *Heuristic (200 trials):* the best trial scored 0.589 in the search but
+  **0.550 on 1,000 unseen deals**. Every trial was scored on the same deals, so
+  the best one is partly the luckiest one (the winner's curse). `brisca tune`
+  now always reports a held-out score next to the in-search one.
+- *PPO (24 trials, 11 pruned early by a median pruner):* every top trial used
+  the shared per-card policy head, and the best reached 0.50 against the
+  heuristic after just 400k steps, versus about 0.32 for the defaults.
+- *The first gate design was wrong.* `ppo-v2`, trained for 3M steps with the
+  tuned settings, originally faced the champion head to head, drew (0.507,
+  p = 0.37) and was rejected. The tournament then rated it clearly above
+  `ppo-v1` across the whole field (+337 vs +310 Elo, 0.64 vs 0.57 against
+  greedy). Head-to-head results are not transitive, so the gate now compares
+  candidate and champion against a fixed panel on paired deals. Re-evaluated
+  that way, `ppo-v2` scores 0.572 vs 0.508 (p = 0.006) and is the champion.
+- *Tuning budgets matter.* The search scored trials after 400k steps, which
+  rewards fast learners. The tuned run was ahead early but finished close to
+  the original settings, so most of the gain is in sample efficiency. Longer
+  budgets or multi-fidelity methods such as Hyperband are the next step.
 
 ## The game
 
