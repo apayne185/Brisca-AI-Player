@@ -26,7 +26,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - run: uv sync
+      - run: uv sync --all-extras
       - run: uv run ruff check --output-format=github .
       - run: uv run ruff format --check .
 
@@ -38,7 +38,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - run: uv sync
+      - run: uv sync --all-extras
       - run: uv run mypy
 
   test:
@@ -54,7 +54,7 @@ jobs:
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
-      - run: uv sync
+      - run: uv sync --all-extras
       - run: uv run pytest --cov --cov-report=term-missing --cov-report=xml
       - uses: actions/upload-artifact@v7
         if: matrix.python-version == '3.12'
@@ -70,7 +70,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - run: uv sync
+      - run: uv sync --all-extras
       - run: uv run pytest -m slow -n auto
 
   build:
