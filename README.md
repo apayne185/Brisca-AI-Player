@@ -27,6 +27,38 @@ make install   # environment, dev tools and git hooks
 make check     # lint, strict type checking and tests, exactly as CI runs them
 ```
 
+## Using the engine
+
+The rules engine is a set of pure functions over an immutable `GameState`, so
+search algorithms can branch from any state without copying.
+
+```python
+import random
+from brisca import determinize, legal_actions, new_game, observe, step, winner
+
+rng = random.Random(0)
+state = new_game(seed=rng)
+while not state.is_terminal:
+    obs = observe(state, state.to_play)  # what the player to move can see
+    sample = determinize(obs, rng)  # one consistent guess at the hidden cards
+    state = step(state, rng.choice(legal_actions(state)))
+
+print(state.scores, winner(state))
+```
+
+| Module | Responsibility |
+| --- | --- |
+| `brisca.cards` | Spanish deck, card points, trick-taking strength, stable card ordinals for ML encodings |
+| `brisca.engine` | `new_game`, `legal_actions`, `step`, `trick_winner`, `winner`, `returns` |
+| `brisca.observation` | Per-player information sets (`observe`) and uniform sampling of consistent hidden states (`determinize`) |
+
+The engine is covered by table-driven rule tests and Hypothesis property tests
+that check invariants in every reachable state: each card exists exactly once,
+scores equal the points of won tricks, the face-up trump is drawn last, the
+trick winner leads, and every game is a 120-point zero-sum game. Observations
+are tested for leaks: resampling the hidden cards never changes what a player
+sees. A random game runs in about 145 µs on one core (`make bench`).
+
 ## The game
 
 Brisca is played with the 40-card Spanish deck: four suits (oros, copas,
