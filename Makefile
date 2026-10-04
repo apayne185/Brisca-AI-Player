@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install lint format typecheck test test-slow cov bench check build clean
+.PHONY: help install lint format typecheck test test-slow cov bench check build clean tournament leaderboard
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -32,6 +32,12 @@ bench: ## Run performance benchmarks
 	uv run pytest --benchmark-only --benchmark-enable
 
 check: lint typecheck cov ## Everything CI runs
+
+tournament: ## Run the full agent tournament (~10 min on 8 cores)
+	uv run brisca tournament configs/tournament.toml
+
+leaderboard: ## Publish the latest tournament to results/ and the README
+	uv run brisca report --out results/leaderboard.md --readme README.md --export-games results/games.parquet
 
 build: ## Build sdist and wheel
 	uv build

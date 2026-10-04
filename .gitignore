@@ -27,6 +27,8 @@ outputs/
 multirun/
 data/
 *.db
+*.duckdb
+*.duckdb.wal
 
 # Editors / OS
 .vscode/
