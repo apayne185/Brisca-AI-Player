@@ -32,6 +32,8 @@ class MatchResult:
     losses: int
     points_for: int
     points_against: int
+    deal_scores: tuple[float, ...] = ()
+    """Mean score over each duplicate pair of games, in deal order."""
 
     @property
     def games(self) -> int:
@@ -51,7 +53,9 @@ def play_match(agent: Agent, opponent: Agent, deals: int, seed: int = 0) -> Matc
     """
     deal_seeds = random.Random(seed).sample(range(2**31), deals)
     wins = draws = losses = points_for = points_against = 0
+    deal_scores = []
     for deal in deal_seeds:
+        deal_score = 0.0
         for seat in range(NUM_PLAYERS):
             seats = [opponent] * NUM_PLAYERS
             seats[seat] = agent
@@ -62,4 +66,6 @@ def play_match(agent: Agent, opponent: Agent, deals: int, seed: int = 0) -> Matc
             losses += won is not None and won != seat
             points_for += final.scores[seat]
             points_against += sum(final.scores) - final.scores[seat]
-    return MatchResult(wins, draws, losses, points_for, points_against)
+            deal_score += 1.0 if won == seat else 0.5 if won is None else 0.0
+        deal_scores.append(deal_score / NUM_PLAYERS)
+    return MatchResult(wins, draws, losses, points_for, points_against, tuple(deal_scores))

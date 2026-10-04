@@ -8,7 +8,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from brisca.agents import REGISTRY, Agent, make_agent
+from brisca.agents import REGISTRY, Agent, HeuristicAgent, HeuristicParams, make_agent
 from brisca.observation import Observation, observe
 from tests.helpers import random_playout
 
@@ -60,6 +60,12 @@ def test_agents_are_reproducible_from_seed(name: str) -> None:
     first = make_agent(name, **FAST_KWARGS[name])
     second = make_agent(name, **FAST_KWARGS[name])
     assert [first.act(o) for o in observations] == [second.act(o) for o in observations]
+
+
+def test_heuristic_params_can_be_set_by_name() -> None:
+    agent = make_agent("heuristic", capture_threshold=3, secure_points=False)
+    assert isinstance(agent, HeuristicAgent)
+    assert agent.params == HeuristicParams(capture_threshold=3, secure_points=False)
 
 
 def test_make_agent_rejects_unknown_name() -> None:

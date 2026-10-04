@@ -17,6 +17,11 @@ id = "heuristic"
 type = "heuristic"
 
 [[agents]]
+id = "heuristic-tuned"  # best of 200 Optuna trials, configs/heuristic-tuned.toml
+type = "heuristic"
+params = { capture_threshold = 4, endgame_trumps = true, secure_points = true, trump_cost = 2.833 }
+
+[[agents]]
 id = "alphabeta"
 type = "alphabeta"
 params = { samples = 20, depth = 6, seed = 0 }
@@ -30,3 +35,8 @@ params = { iterations = 1000, seed = 0 }
 id = "ppo-v1"
 type = "ppo"
 params = { path = "models/ppo-v1.pt" }
+
+[[agents]]
+id = "ppo-v2"  # tuned hyperparameters, configs/ppo-tuned.toml
+type = "ppo"
+params = { path = "models/ppo-v2.pt" }

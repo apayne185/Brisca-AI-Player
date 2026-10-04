@@ -59,8 +59,13 @@ class GameRecord:
 
 
 def build_agent(spec: AgentSpec) -> Agent:
-    if spec.type == "ppo":
-        from brisca.rl import PolicyAgent  # optional dependency
+    if spec.type == "ppo":  # optional dependencies, imported only when needed
+        if "model_uri" in spec.params:
+            from brisca.mlops.tracking import configure, load_policy_agent
+
+            configure("tournament")
+            return load_policy_agent(**spec.params)
+        from brisca.rl import PolicyAgent
 
         return PolicyAgent.from_checkpoint(**spec.params)
     return make_agent(spec.type, **spec.params)

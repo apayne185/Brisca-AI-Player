@@ -9,10 +9,15 @@ from brisca.agents.heuristic import HeuristicAgent, HeuristicParams
 from brisca.agents.ismcts import ISMCTSAgent
 from brisca.agents.simple import GreedyAgent, RandomAgent
 
+
+def _heuristic(**params: Any) -> HeuristicAgent:
+    return HeuristicAgent(HeuristicParams(**params))
+
+
 REGISTRY: dict[str, Callable[..., Agent]] = {
     "random": RandomAgent,
     "greedy": GreedyAgent,
-    "heuristic": HeuristicAgent,
+    "heuristic": _heuristic,
     "ismcts": ISMCTSAgent,
     "alphabeta": DeterminizedAlphaBetaAgent,
 }

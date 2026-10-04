@@ -17,7 +17,7 @@ from brisca.rl import (  # noqa: E402
     train,
 )
 from brisca.rl.ppo import League, _gae  # noqa: E402
-from brisca.rl.train import main, parse_args  # noqa: E402
+from brisca.rl.train import config_from, main, parse_args  # noqa: E402
 from tests.helpers import random_playout  # noqa: E402
 
 TINY = PPOConfig(
@@ -113,18 +113,35 @@ def test_training_is_reproducible() -> None:
 def test_cli_trains_and_saves(tmp_path: Path) -> None:
     out = tmp_path / "ppo.pt"
     main(["--total-steps", "128", "--num-envs", "4", "--rollout-len", "32", "--hidden", "16",
-          "--eval-every", "1", "--eval-deals", "1", "--out", str(out)])  # fmt: skip
+          "--eval-every", "1", "--eval-deals", "1", "--out", str(out), "--no-mlflow"])  # fmt: skip
     _, metadata = load_checkpoint(out)
     assert metadata["config"]["total_steps"] == 128
 
 
 def test_cli_exposes_every_config_field() -> None:
-    config, out = parse_args(["--learning-rate", "0.002", "--shaping", "0", "--card-head"])
+    args = parse_args(["--learning-rate", "0.002", "--shaping", "0", "--card-head"])
+    config = config_from(args)
     assert config.learning_rate == 0.002
     assert config.shaping == 0.0
     assert config.card_head is True
-    assert parse_args(["--no-card-head"])[0].card_head is False
-    assert out == Path("models/ppo.pt")
+    assert config_from(parse_args(["--no-card-head"])).card_head is False
+    assert args.out == Path("models/ppo.pt")
+
+
+def test_cli_layers_flags_over_toml_config(tmp_path: Path) -> None:
+    path = tmp_path / "ppo.toml"
+    path.write_text("learning_rate = 0.0005\nhidden = 64\ncard_head = true\n")
+    config = config_from(parse_args(["--config", str(path), "--hidden", "32"]))
+    assert config.learning_rate == 0.0005
+    assert config.card_head is True
+    assert config.hidden == 32
+
+
+def test_cli_rejects_unknown_toml_settings(tmp_path: Path) -> None:
+    path = tmp_path / "ppo.toml"
+    path.write_text("learning_rat = 0.1\n")
+    with pytest.raises(SystemExit, match="learning_rat"):
+        parse_args(["--config", str(path)])
 
 
 @pytest.mark.slow

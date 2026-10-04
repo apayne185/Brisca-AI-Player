@@ -30,6 +30,10 @@ dependencies = [
 rl = [
     "torch>=2.4",
 ]
+mlops = [
+    "mlflow>=3.0",
+    "optuna>=4.0",
+]
 
 [project.scripts]
 brisca = "brisca.cli:main"
@@ -115,6 +119,11 @@ addopts = [
 ]
 markers = [
     "slow: long-running tests (deselect with -m 'not slow')",
+]
+filterwarnings = [
+    # Raised inside MLflow itself (schema nags, its SQLAlchemy usage), not by our code.
+    "ignore::UserWarning:mlflow.*",
+    "ignore::DeprecationWarning:mlflow.*",
 ]
 
 [tool.coverage.run]
