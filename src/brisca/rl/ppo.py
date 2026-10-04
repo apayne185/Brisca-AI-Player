@@ -44,6 +44,8 @@ class PPOConfig:
     value_coef: float = 0.5
     max_grad_norm: float = 0.5
     hidden: int = 256
+    card_head: bool = False
+    """Score each card with a shared network instead of one output per card."""
     shaping: float = 0.5
     """Weight of the per-move point-difference reward relative to the win/loss reward."""
     self_play_prob: float = 0.5
@@ -109,7 +111,7 @@ def train(
     np.random.seed(config.seed)
     torch.manual_seed(config.seed)
 
-    model = ActorCritic(hidden=config.hidden)
+    model = ActorCritic(hidden=config.hidden, card_head=config.card_head)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate, eps=1e-5)
     league = League(config)
     envs = VectorEnv(

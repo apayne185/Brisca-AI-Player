@@ -44,11 +44,12 @@ class PolicyAgent:
 
 def save_checkpoint(model: ActorCritic, path: str | Path, metadata: dict[str, Any]) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"hidden": model.hidden, "state_dict": model.state_dict(), **metadata}, path)
+    architecture = {"hidden": model.hidden, "card_head": model.card_head}
+    torch.save({"architecture": architecture, "state_dict": model.state_dict(), **metadata}, path)
 
 
 def load_checkpoint(path: str | Path) -> tuple[ActorCritic, dict[str, Any]]:
     payload: dict[str, Any] = torch.load(path, map_location="cpu", weights_only=True)
-    model = ActorCritic(hidden=payload.pop("hidden"))
+    model = ActorCritic(**payload.pop("architecture"))
     model.load_state_dict(payload.pop("state_dict"))
     return model, payload

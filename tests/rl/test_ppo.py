@@ -33,8 +33,9 @@ TINY = PPOConfig(
 )
 
 
-def test_model_never_puts_mass_on_illegal_cards() -> None:
-    model = ActorCritic(hidden=16)
+@pytest.mark.parametrize("card_head", [False, True])
+def test_model_never_puts_mass_on_illegal_cards(card_head: bool) -> None:
+    model = ActorCritic(hidden=16, card_head=card_head)
     obs = torch.randn(8, OBS_SIZE)
     mask = torch.zeros(8, NUM_ACTIONS, dtype=torch.bool)
     mask[:, :3] = True
@@ -53,8 +54,9 @@ def test_policy_agent_plays_legal_cards(greedy: bool) -> None:
             assert agent.act(observe(state, state.to_play)) in state.hands[state.to_play]
 
 
-def test_checkpoint_round_trip(tmp_path: Path) -> None:
-    model = ActorCritic(hidden=16)
+@pytest.mark.parametrize("card_head", [False, True])
+def test_checkpoint_round_trip(tmp_path: Path, card_head: bool) -> None:
+    model = ActorCritic(hidden=16, card_head=card_head)
     path = tmp_path / "nested" / "model.pt"
     save_checkpoint(model, path, {"note": "test"})
     loaded, metadata = load_checkpoint(path)
@@ -117,9 +119,11 @@ def test_cli_trains_and_saves(tmp_path: Path) -> None:
 
 
 def test_cli_exposes_every_config_field() -> None:
-    config, out = parse_args(["--learning-rate", "0.001", "--shaping", "0"])
-    assert config.learning_rate == 0.001
+    config, out = parse_args(["--learning-rate", "0.002", "--shaping", "0", "--card-head"])
+    assert config.learning_rate == 0.002
     assert config.shaping == 0.0
+    assert config.card_head is True
+    assert parse_args(["--no-card-head"])[0].card_head is False
     assert out == Path("models/ppo.pt")
 
 

@@ -19,10 +19,11 @@ def parse_args(argv: list[str] | None = None) -> tuple[PPOConfig, Path]:
     parser = argparse.ArgumentParser(description=__doc__)
     defaults = PPOConfig()
     for field in dataclasses.fields(PPOConfig):
-        default = getattr(defaults, field.name)
-        parser.add_argument(
-            f"--{field.name.replace('_', '-')}", type=type(default), default=default
-        )
+        flag, default = f"--{field.name.replace('_', '-')}", getattr(defaults, field.name)
+        if isinstance(default, bool):
+            parser.add_argument(flag, action=argparse.BooleanOptionalAction, default=default)
+        else:
+            parser.add_argument(flag, type=type(default), default=default)
     parser.add_argument("--out", type=Path, default=Path("models/ppo.pt"))
     args = vars(parser.parse_args(argv))
     out = args.pop("out")
