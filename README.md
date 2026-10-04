@@ -87,6 +87,39 @@ both search agents must play solved endgames optimally. A seeded strength suite
 in CI checks that every agent clearly beats random play. Ratings with confidence
 intervals come in Phase 3.
 
+## Reinforcement learning
+
+A PPO agent learns by self-play (`pip install 'brisca[rl]'`, then `brisca-train`).
+Each training episode is played against an opponent drawn from a league: the
+random, greedy and heuristic agents plus frozen snapshots of the learner. The
+policy is an action-masked actor-critic over the 40 cards.
+
+```bash
+brisca-train --total-steps 3000000 --out models/ppo.pt   # ~25 min on one CPU core
+```
+
+After 3M steps (about 150k games), scored over 1,000 duplicate games against
+each opponent, with 95% confidence intervals:
+
+| Opponent | Score, per-output policy head | Score, shared per-card head |
+| --- | --- | --- |
+| random | 0.873 ± 0.021 | 0.875 ± 0.021 |
+| greedy | 0.534 ± 0.031 | 0.546 ± 0.031 |
+| heuristic | 0.444 ± 0.031 | 0.442 ± 0.031 |
+
+PPO comfortably beats random play and edges past the greedy agent, but it does
+not yet beat the hand-tuned heuristic. Phase 4 adds systematic hyperparameter
+search and experiment tracking to close that gap.
+
+**What made it learn.** The first version stayed at random-level play however
+it was tuned. Driving the environment with the greedy agent reproduced the
+expected 0.86 score, which ruled out a reward or environment bug and pointed at
+the input: with only one-hot card ids, the network had to rediscover which card
+beats which from scratch. Adding two relational feature planes, *trump suit*
+and *cards that beat the current trick*, took the agent from 0.52 to 0.74
+against random within 100k steps. The shared per-card head (`--card-head`)
+learns faster early on but converges to the same strength.
+
 ## The game
 
 Brisca is played with the 40-card Spanish deck: four suits (oros, copas,
