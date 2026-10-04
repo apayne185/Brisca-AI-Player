@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 from mlflow import MlflowClient
 
-from brisca.arena import MatchResult
 from brisca.encoding import action_mask, encode_observation
 from brisca.mlops import promotion
 from brisca.mlops.promotion import promote, sign_test
@@ -30,6 +29,18 @@ def logged_policy(seed: int = 0) -> str:
     torch.manual_seed(seed)
     with mlflow.start_run():
         return log_policy(ActorCritic(hidden=16), {"seed": seed})
+
+
+def test_paired_sign_test_counts_differences_around_zero() -> None:
+    assert sign_test([0.25, 0.5, -0.25, 0.0, 0.75], centre=0.0) == pytest.approx(5 / 16)
+
+
+def test_panel_scores_cover_every_opponent() -> None:
+    from brisca.agents import GreedyAgent
+
+    scores = promotion.panel_scores(GreedyAgent(), ["random", "greedy"], deals=3, seed=0)
+    assert len(scores) == 6
+    assert scores[3:] == [0.5, 0.5, 0.5], "a deterministic agent ties itself on every deal"
 
 
 @pytest.mark.parametrize(
@@ -80,16 +91,14 @@ def test_tournament_can_load_registered_models() -> None:
     assert agent.name == "ppo"
 
 
-def fake_match(deal_scores: list[float]) -> object:
-    """Stand-in for play_match that returns fixed per-deal results."""
+def fake_panel(candidate: list[float], champion: list[float]) -> object:
+    """Stand-in for panel_scores: the first call is the candidate, the second the champion."""
+    results = iter([candidate, champion])
 
-    def play_match(*args: object, **kwargs: object) -> MatchResult:
-        wins = 2 * sum(s > 0.5 for s in deal_scores)
-        losses = 2 * sum(s < 0.5 for s in deal_scores)
-        draws = 2 * len(deal_scores) - wins - losses
-        return MatchResult(wins, draws, losses, 0, 0, tuple(deal_scores))
+    def panel_scores(*args: object, **kwargs: object) -> list[float]:
+        return next(results)
 
-    return play_match
+    return panel_scores
 
 
 def test_first_model_becomes_champion() -> None:
@@ -103,15 +112,18 @@ def test_first_model_becomes_champion() -> None:
 def test_challenger_needs_a_significant_win(monkeypatch: pytest.MonkeyPatch) -> None:
     promote(logged_policy(0))
 
-    monkeypatch.setattr(promotion, "play_match", fake_match([1.0] * 3 + [0.0] * 2))
+    # Better on 3 deals, worse on 2: not significant.
+    monkeypatch.setattr(promotion, "panel_scores", fake_panel([1.0] * 3 + [0.0] * 2, [0.5] * 5))
     rejected = promote(logged_policy(1), deals=5)
     assert not rejected.promoted
-    assert "does not significantly beat v1" in rejected.reason
+    assert "does not significantly beat v1 against greedy/heuristic" in rejected.reason
 
-    monkeypatch.setattr(promotion, "play_match", fake_match([1.0] * 10))
+    # Better on all 10 deals: p = 2^-10.
+    monkeypatch.setattr(promotion, "panel_scores", fake_panel([0.75] * 10, [0.25] * 10))
     accepted = promote(logged_policy(2), deals=10)
     assert accepted.promoted
     assert accepted.p_value == pytest.approx(1 / 1024)
+    assert (accepted.candidate_score, accepted.champion_score) == (0.75, 0.25)
 
     client = MlflowClient()
     assert str(client.get_model_version_by_alias(REGISTERED_MODEL, CHAMPION_ALIAS).version) == "3"
