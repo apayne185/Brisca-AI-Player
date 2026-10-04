@@ -33,3 +33,8 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+
+  - repo: https://github.com/Mateusz-Grzelinski/actionlint-py
+    rev: v1.7.12.25
+    hooks:
+      - id: actionlint
