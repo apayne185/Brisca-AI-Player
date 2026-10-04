@@ -85,7 +85,19 @@ def _promote(args: argparse.Namespace) -> None:
     from brisca.mlops.tracking import configure
 
     configure("promotion")
-    decision = promote(args.model_uri, deals=args.deals, alpha=args.alpha)
+    model_uri = args.model
+    if Path(model_uri).is_file():  # a local checkpoint: log it to MLflow first
+        import mlflow
+
+        from brisca.mlops.tracking import git_tags, log_policy
+        from brisca.rl import load_checkpoint
+
+        configure("imported")
+        model, metadata = load_checkpoint(model_uri)
+        with mlflow.start_run(run_name=Path(model_uri).stem, tags=git_tags()):
+            mlflow.log_param("source", model_uri)
+            model_uri = log_policy(model, metadata)
+    decision = promote(model_uri, deals=args.deals, alpha=args.alpha)
     print(f"v{decision.version} promoted={decision.promoted}: {decision.reason}")
 
 
@@ -120,8 +132,10 @@ def main(argv: list[str] | None = None) -> None:
     tune.add_argument("--out", type=Path, required=True, help="TOML file for the best settings")
     tune.set_defaults(func=_tune)
 
-    prom = sub.add_parser("promote", help="register a logged policy; promote if it beats champion")
-    prom.add_argument("model_uri")
+    prom = sub.add_parser(
+        "promote", help="register a policy and make it champion if it beats the current one"
+    )
+    prom.add_argument("model", help="MLflow model URI or local checkpoint path")
     prom.add_argument("--deals", type=int, default=300)
     prom.add_argument("--alpha", type=float, default=0.05)
     prom.set_defaults(func=_promote)

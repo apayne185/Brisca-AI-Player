@@ -94,3 +94,15 @@ def test_cli_promote(capsys: pytest.CaptureFixture[str]) -> None:
         uri = log_policy(ActorCritic(hidden=8), {})
     main(["promote", uri])
     assert "v1 promoted=True" in capsys.readouterr().out
+
+
+def test_cli_promote_imports_local_checkpoints(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from brisca.rl import ActorCritic, save_checkpoint
+
+    path = tmp_path / "local.pt"
+    save_checkpoint(ActorCritic(hidden=8), path, {"note": "v1"})
+    main(["promote", str(path)])
+    assert "v1 promoted=True" in capsys.readouterr().out
+    assert len(mlflow.search_runs(experiment_names=["imported"])) == 1
