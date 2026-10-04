@@ -7,7 +7,7 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-added-large-files
-        args: ["--maxkb=500"]
+        args: ["--maxkb=1024"]  # room for small model checkpoints in models/
       - id: check-merge-conflict
       - id: detect-private-key
       - id: no-commit-to-branch
