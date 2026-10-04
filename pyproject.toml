@@ -21,7 +21,17 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+rl = [
+    "torch>=2.4",
+]
+
+[project.scripts]
+brisca-train = "brisca.rl.train:main"
 
 [project.urls]
 Repository = "https://github.com/apayne185/Brisca-AI-Player"
@@ -38,6 +48,17 @@ dev = [
     "pytest-xdist>=3.8.0",
     "ruff>=0.5",
 ]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
 
 [build-system]
 requires = ["hatchling"]
@@ -73,6 +94,11 @@ mypy_path = "src"
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
+# torch.distributions and Tensor.split are not fully annotated.
+module = ["brisca.rl.*", "tests.rl.*"]
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_decorators = false
 
@@ -99,6 +125,7 @@ skip_covered = true
 fail_under = 90
 exclude_also = [
     "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
     "raise NotImplementedError",
     "\\.\\.\\.",
 ]
