@@ -1,0 +1,19 @@
+name: Feature request
+description: Propose an agent, experiment or platform improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+  - type: textarea
+    id: success
+    attributes:
+      label: How will we measure success?
+      description: Metric, baseline and the evaluation that would show an improvement.
