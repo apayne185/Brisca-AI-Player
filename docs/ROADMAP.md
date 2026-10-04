@@ -10,8 +10,8 @@ service, and a gameplay-telemetry bot-detection model.
 | 0 | Foundations: package layout, tooling, CI/CD, branch protection, Dependabot | Done |
 | 1 | Correct, fast, immutable game engine with information-set API and property tests | Done |
 | 2 | Agent zoo behind one interface: random, greedy, heuristic, ISMCTS, determinized alpha-beta, PPO self-play (with a batched environment for training throughput) | Done |
-| 3 | Evaluation: seeded duplicate-deal tournaments, Elo/TrueSkill with bootstrap CIs, results in DuckDB | Next |
-| 4 | Training pipelines: MLflow tracking and registry with a significance-gated champion, Hydra configs | Planned |
+| 3 | Evaluation: seeded duplicate-deal tournaments, Bradley-Terry ratings with bootstrap CIs, results in DuckDB | Done |
+| 4 | Training pipelines: MLflow tracking and registry with a significance-gated champion, Hydra configs | Next |
 | 5 | Bot detection: telemetry dataset, XGBoost classifier with grouped CV, calibration, SHAP, model card | Planned |
 | 6 | Serving: FastAPI inference, Docker, playable web demo, Prometheus metrics, drift monitoring | Planned |
 | 7 | Stretch: LLM move explanations and LLM-agent benchmark, Kafka event streaming, AWS IaC | Planned |

@@ -27,6 +27,54 @@ make install   # environment, dev tools and git hooks
 make check     # lint, strict type checking and tests, exactly as CI runs them
 ```
 
+## Leaderboard
+
+Round robin between every agent: 100 duplicate deals per pairing (200 games),
+the same deals for every pairing, 3,000 games in total.
+
+<!-- leaderboard:start -->
+Bradley-Terry ratings on the Elo scale, anchored at `random` = 0, with 95% bootstrap intervals from resampling deals.
+
+| Rank | Agent | Elo | 95% CI | Score | Avg points | ms / move |
+| ---: | --- | ---: | :---: | ---: | ---: | ---: |
+| 1 | `ismcts` | +428 | [+395, +471] | 0.681 | 63.5 | 254.84 |
+| 2 | `alphabeta` | +400 | [+367, +439] | 0.640 | 68.1 | 81.56 |
+| 3 | `heuristic` | +357 | [+320, +395] | 0.574 | 63.9 | 0.01 |
+| 4 | `ppo-v1` | +314 | [+281, +352] | 0.508 | 62.6 | 6.74 |
+| 5 | `greedy` | +297 | [+263, +336] | 0.483 | 61.7 | 0.01 |
+| 6 | `random` | +0 | [+0, +0] | 0.114 | 40.2 | 0.00 |
+
+Head-to-head score of the row agent against the column agent (± half-width of the 95% Wilson interval):
+
+| | `ismcts` | `alphabeta` | `heuristic` | `ppo-v1` | `greedy` | `random` |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `ismcts` | - | 0.56 ± 0.07 | 0.56 ± 0.07 | 0.70 ± 0.06 | 0.66 ± 0.07 | 0.93 ± 0.04 |
+| `alphabeta` | 0.44 ± 0.07 | - | 0.56 ± 0.07 | 0.64 ± 0.07 | 0.63 ± 0.07 | 0.92 ± 0.04 |
+| `heuristic` | 0.44 ± 0.07 | 0.44 ± 0.07 | - | 0.54 ± 0.07 | 0.58 ± 0.07 | 0.88 ± 0.05 |
+| `ppo-v1` | 0.30 ± 0.06 | 0.36 ± 0.07 | 0.46 ± 0.07 | - | 0.57 ± 0.07 | 0.85 ± 0.05 |
+| `greedy` | 0.34 ± 0.07 | 0.37 ± 0.07 | 0.42 ± 0.07 | 0.43 ± 0.07 | - | 0.85 ± 0.05 |
+| `random` | 0.07 ± 0.04 | 0.08 ± 0.04 | 0.12 ± 0.05 | 0.15 ± 0.05 | 0.15 ± 0.05 | - |
+<!-- leaderboard:end -->
+
+**Takeaways.** Search wins: ISMCTS is the strongest agent and beats every
+other agent head to head, with determinized alpha-beta close behind. But the
+rule-based heuristic is within about 70 Elo of the top while being roughly
+10,000× cheaper per move, which makes it the obvious choice wherever latency
+or cost matters. The PPO agent sits between greedy and heuristic. Closing that
+gap is the goal of Phase 4. (Timings were measured with seven games running in
+parallel, so absolute milliseconds are inflated; the ratios hold.)
+
+Reproduce with `make tournament && make leaderboard`. Games are stored in DuckDB
+(`results/brisca.duckdb`) and analysed in SQL; the raw games are published as
+[`results/games.parquet`](results/games.parquet) and the agent settings are in
+[`configs/tournament.toml`](configs/tournament.toml).
+
+**How it is measured.** Ratings come from a Bradley-Terry model fitted by
+maximum likelihood over all games and are shown on the Elo scale, so they do
+not depend on game order the way incremental Elo does. Uncertainty comes from a
+bootstrap that resamples whole deals within each pairing, which keeps each
+duplicate pair together. Head-to-head cells use Wilson score intervals.
+
 ## Using the engine
 
 The rules engine is a set of pure functions over an immutable `GameState`, so

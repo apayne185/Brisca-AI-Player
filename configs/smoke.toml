@@ -1,0 +1,17 @@
+# Tiny tournament for checking the pipeline end to end in seconds.
+deals = 3
+seed = 0
+
+[[agents]]
+id = "random"
+type = "random"
+params = { seed = 0 }
+
+[[agents]]
+id = "greedy"
+type = "greedy"
+
+[[agents]]
+id = "ismcts-50"
+type = "ismcts"
+params = { iterations = 50, seed = 0 }

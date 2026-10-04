@@ -1,0 +1,32 @@
+# Round robin between every agent. Run with:
+#   brisca tournament configs/tournament.toml && brisca report --readme README.md
+deals = 100  # per pairing; each deal is played twice with seats swapped
+seed = 0
+
+[[agents]]
+id = "random"
+type = "random"
+params = { seed = 0 }
+
+[[agents]]
+id = "greedy"
+type = "greedy"
+
+[[agents]]
+id = "heuristic"
+type = "heuristic"
+
+[[agents]]
+id = "alphabeta"
+type = "alphabeta"
+params = { samples = 20, depth = 6, seed = 0 }
+
+[[agents]]
+id = "ismcts"
+type = "ismcts"
+params = { iterations = 1000, seed = 0 }
+
+[[agents]]
+id = "ppo-v1"
+type = "ppo"
+params = { path = "models/ppo-v1.pt" }
