@@ -12,7 +12,7 @@ import random
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from brisca.cards import DECK, TOTAL_POINTS, Card, Suit
+from brisca.cards import DECK, POINTS, STRENGTH, TOTAL_POINTS, Card, Suit
 
 NUM_PLAYERS = 2
 HAND_SIZE = 3
@@ -97,7 +97,7 @@ def new_game(seed: Seed = None, first_player: int = 0) -> GameState:
 def beats(challenger: Card, incumbent: Card, trump: Suit) -> bool:
     """Whether ``challenger`` takes the trick from the currently winning card."""
     if challenger.suit == incumbent.suit:
-        return challenger.strength > incumbent.strength
+        return STRENGTH[challenger.rank] > STRENGTH[incumbent.rank]
     return challenger.suit == trump
 
 
@@ -119,13 +119,16 @@ def legal_actions(state: GameState) -> tuple[Card, ...]:
 
 def step(state: GameState, card: Card) -> GameState:
     """Play ``card`` for the player to move and return the resulting state."""
+    # Hot path for search and self-play: avoid redundant copies and lookups.
     player = state.to_play
     hand = state.hands[player]
-    if state.is_terminal or card not in hand:
-        raise IllegalActionError(f"player {player} cannot play {card} in state: {state}")
+    try:
+        i = hand.index(card)
+    except ValueError:  # also covers terminal states, where every hand is empty
+        raise IllegalActionError(f"player {player} cannot play {card} in state: {state}") from None
 
     hands = list(state.hands)
-    hands[player] = tuple(c for c in hand if c != card)
+    hands[player] = hand[:i] + hand[i + 1 :]
     trick = (*state.current_trick, card)
 
     if len(trick) < NUM_PLAYERS:
@@ -139,12 +142,11 @@ def step(state: GameState, card: Card) -> GameState:
             history=state.history,
         )
 
-    leader = state.leader
-    winner = (leader + trick_winner(trick, state.trump)) % NUM_PLAYERS
-    completed = Trick(leader=leader, cards=trick, winner=winner)
+    leader = (player + 1) % NUM_PLAYERS
+    winner = (leader + trick_winner(trick, state.trump_card.suit)) % NUM_PLAYERS
 
     scores = list(state.scores)
-    scores[winner] += completed.points
+    scores[winner] += sum([POINTS[c.rank] for c in trick])
 
     stock = state.stock
     if stock:
@@ -160,7 +162,7 @@ def step(state: GameState, card: Card) -> GameState:
         current_trick=(),
         to_play=winner,
         scores=tuple(scores),
-        history=(*state.history, completed),
+        history=(*state.history, Trick(leader=leader, cards=trick, winner=winner)),
     )
 
 
