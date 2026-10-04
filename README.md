@@ -59,6 +59,34 @@ trick winner leads, and every game is a 120-point zero-sum game. Observations
 are tested for leaks: resampling the hidden cards never changes what a player
 sees. A random game runs in about 145 µs on one core (`make bench`).
 
+## Agents
+
+Every agent implements one protocol, `act(observation) -> card`, and only ever
+sees what its player could see at the table.
+
+| Agent | Approach |
+| --- | --- |
+| `random` | Uniformly random legal card, the baseline floor |
+| `greedy` | One-ply: best immediate point swing, cheapest card otherwise |
+| `heuristic` | Rule-based tactics with tunable parameters: bank points when winning in suit, save trumps for valuable tricks, trump freely in the endgame |
+| `ismcts` | Single-Observer Information Set MCTS: searches over the player's information set using determinized samples and availability-aware UCB |
+| `alphabeta` | Perfect Information Monte Carlo: alpha-beta over sampled determinizations, and exact once the stock is empty |
+
+```python
+from brisca.agents import make_agent
+from brisca.arena import play_match
+
+result = play_match(make_agent("ismcts", iterations=500, seed=0), make_agent("heuristic"), deals=50)
+print(result.score)  # win rate with draws as half, over 100 duplicate games
+```
+
+Matches use **duplicate deals**: each shuffled deal is played twice with the
+seats swapped, which cancels most of the luck of the cards. Search agents are
+tested against exact solvers: alpha-beta pruning must match plain minimax, and
+both search agents must play solved endgames optimally. A seeded strength suite
+in CI checks that every agent clearly beats random play. Ratings with confidence
+intervals come in Phase 3.
+
 ## The game
 
 Brisca is played with the 40-card Spanish deck: four suits (oros, copas,
