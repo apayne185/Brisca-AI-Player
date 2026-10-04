@@ -62,6 +62,17 @@ jobs:
           name: coverage
           path: coverage.xml
 
+  strength:
+    name: Agent strength
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync
+      - run: uv run pytest -m slow -n auto
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -76,7 +87,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [lint, typecheck, test, build]
+    needs: [lint, typecheck, test, strength, build]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any required job did not succeed
