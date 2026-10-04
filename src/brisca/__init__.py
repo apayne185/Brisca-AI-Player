@@ -14,6 +14,7 @@ from brisca.engine import (
     trick_winner,
     winner,
 )
+from brisca.observation import Observation, determinize, observe
 
 __version__ = version("brisca")
 
@@ -25,11 +26,14 @@ __all__ = [
     "Card",
     "GameState",
     "IllegalActionError",
+    "Observation",
     "Suit",
     "Trick",
     "__version__",
+    "determinize",
     "legal_actions",
     "new_game",
+    "observe",
     "returns",
     "step",
     "trick_winner",
