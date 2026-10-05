@@ -115,6 +115,9 @@ select = [
     "PERF",     # performance anti-patterns
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["brisca", "brisca_infra"]
+
 [tool.ruff.lint.per-file-ignores]
 # X for a feature matrix is the standard ML convention.
 "src/brisca/detection/*" = ["N803", "N806"]

@@ -1,0 +1,6 @@
+{
+  "app": "uv run python app.py",
+  "context": {
+    "image": "ghcr.io/apayne185/brisca-ai:main"
+  }
+}

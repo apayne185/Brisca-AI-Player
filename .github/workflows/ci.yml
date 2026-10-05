@@ -97,6 +97,22 @@ jobs:
         env:
           BRISCA_KAFKA_BOOTSTRAP: localhost:19092
 
+  infra:
+    name: Infrastructure
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run pytest
+      - name: Synthesize the CloudFormation template
+        run: CDK_OUTDIR=cdk.out uv run python app.py && test -s cdk.out/BriscaAi.template.json
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -111,7 +127,7 @@ jobs:
   ci-success:
     name: CI success
     if: always()
-    needs: [lint, typecheck, test, strength, streaming, build]
+    needs: [lint, typecheck, test, strength, streaming, infra, build]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any required job did not succeed
