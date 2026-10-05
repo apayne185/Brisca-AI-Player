@@ -46,8 +46,12 @@
       <p id="message" class="message">Choose an opponent and start a game.</p>
 
       <div>
-        <span class="label">Your hand</span>
+        <div class="hand-header">
+          <span class="label">Your hand</span>
+          <button id="hint" type="button" class="secondary">Hint</button>
+        </div>
         <div id="hand" class="cards hand"></div>
+        <div id="hint-panel" class="hint" hidden></div>
       </div>
     </section>
 
