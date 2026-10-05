@@ -36,7 +36,12 @@ mlops = [
 ]
 detect = [
     "scikit-learn>=1.5",
-    "xgboost>=2.1",
+    "xgboost-cpu>=2.1",  # same module, without the CUDA/NCCL libraries
+]
+serve = [
+    "fastapi>=0.115",
+    "prometheus-client>=0.21",
+    "uvicorn[standard]>=0.30",
 ]
 
 [project.scripts]
@@ -49,6 +54,7 @@ Issues = "https://github.com/apayne185/Brisca-AI-Player/issues"
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13.1",
     "hypothesis>=6.100",
     "mypy>=1.10",
     "pre-commit>=3.7",

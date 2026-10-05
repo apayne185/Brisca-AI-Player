@@ -13,8 +13,8 @@ service, and a gameplay-telemetry bot-detection model.
 | 3 | Evaluation: seeded duplicate-deal tournaments, Bradley-Terry ratings with bootstrap CIs, results in DuckDB | Done |
 | 4 | Training pipelines: MLflow tracking and registry with a significance-gated champion, Optuna tuning, TOML configs | Done |
 | 5 | Bot detection: synthetic telemetry, SQL features, XGBoost with grouped CV, calibration, SHAP, unseen-adversary test, model card | Done |
-| 6 | Serving: FastAPI inference, Docker, playable web demo, Prometheus metrics, drift monitoring | Next |
-| 7 | Stretch: LLM move explanations and LLM-agent benchmark, Kafka event streaming, AWS IaC | Planned |
+| 6 | Serving: FastAPI inference, Docker, playable web demo, Prometheus/Grafana monitoring, PSI drift, image CI/CD to GHCR | Done |
+| 7 | Stretch: LLM move explanations and LLM-agent benchmark, Kafka event streaming, AWS IaC, ONNX serving without PyTorch | Next |
 
 ## Principles
 
