@@ -103,7 +103,8 @@ human play from a consistent but unfamiliar policy.
   sessions with few endgames deserve less weight.
 - **Adversarial drift.** The `mimic` result shows that any single signal can be
   learned and copied. Detection should be monitored and retrained as bots
-  adapt (Phase 6 adds drift monitoring).
+  adapt; the service tracks feature drift (PSI against the training data) for
+  exactly this reason.
 
 ## Ethical considerations
 
