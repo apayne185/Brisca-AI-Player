@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/apayne185/Brisca-AI-Player/actions/workflows/ci.yml/badge.svg)](https://github.com/apayne185/Brisca-AI-Player/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/apayne185/Brisca-AI-Player/actions/workflows/codeql.yml/badge.svg)](https://github.com/apayne185/Brisca-AI-Player/actions/workflows/codeql.yml)
+[![Docker](https://github.com/apayne185/Brisca-AI-Player/actions/workflows/docker.yml/badge.svg)](https://github.com/apayne185/Brisca-AI-Player/actions/workflows/docker.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-strict-blue)](https://mypy-lang.org/)
@@ -13,12 +14,17 @@ and reinforcement-learning agents, statistically sound evaluation, tracked
 experiments, an inference service, and a bot-detection model trained on
 gameplay telemetry.
 
-> **Status:** under active rebuild. See the [roadmap](docs/ROADMAP.md) for
-> what is done and what is next.
+<p align="center"><img src="docs/images/demo.png" alt="Playing Brisca against the ISMCTS agent in the web demo" width="560"></p>
 
 ## Quickstart
 
-Requires [uv](https://docs.astral.sh/uv/).
+Play against the agents, with Prometheus and a Grafana dashboard alongside:
+
+```bash
+docker compose up --build    # demo and API on :8000, Grafana on :3000
+```
+
+Or develop locally with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 git clone https://github.com/apayne185/Brisca-AI-Player.git
@@ -26,6 +32,8 @@ cd Brisca-AI-Player
 make install   # environment, dev tools and git hooks
 make check     # lint, strict type checking and tests, exactly as CI runs them
 ```
+
+See the [roadmap](docs/ROADMAP.md) for how the project was built, phase by phase.
 
 ## Leaderboard
 
@@ -251,6 +259,33 @@ shipped model shows its false positives fall mostly on **novice** players
 is documented as an open issue in the [model card](docs/model-card-bot-detection.md),
 alongside intended use (flag for human review, never auto-ban), limitations and
 the full [evaluation report](docs/bot-detection-report.md).
+
+## Serving and monitoring
+
+A FastAPI service (`pip install 'brisca[serve]'`, then
+`uvicorn brisca.serving.app:app`) exposes everything above. Interactive docs
+are at `/docs`.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /v1/move` | Choose a card for any agent from a player's observation; impossible observations are rejected with 422 |
+| `POST /v1/bot-score` | Calibrated bot probability for a session, the flag decision at the 1% FPR operating point, and per-feature SHAP contributions |
+| `GET /v1/drift` | Population Stability Index of recently scored sessions against the detector's training data |
+| `POST /v1/games`, `POST /v1/games/{id}/moves` | The playable demo served at `/` |
+| `/health`, `/ready`, `/metrics` | Liveness, readiness (agents and detector loaded) and Prometheus metrics |
+
+The service records request rates and latency per route, each agent's decision
+time, the distribution of bot scores, flags, and per-feature drift. The compose
+stack provisions this Grafana dashboard automatically:
+
+<p align="center"><img src="docs/images/grafana.png" alt="Grafana dashboard with request rate, latency, agent decision time, bot flags and feature drift panels" width="720"></p>
+
+**Delivery.** The image is a multi-stage uv build with CPU-only PyTorch and
+XGBoost, running as a non-root user with a healthcheck. On every pull request,
+CI builds it and smoke-tests the running container; merges to `main` and
+release tags push it to GitHub Container Registry
+(`ghcr.io/apayne185/brisca-ai`). Demo games live in a bounded in-memory store,
+which is fine for one process; scaling out would move them to Redis.
 
 ## The game
 
