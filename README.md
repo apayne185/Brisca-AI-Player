@@ -16,9 +16,54 @@ gameplay telemetry.
 
 <p align="center"><img src="docs/images/demo.png" alt="Playing Brisca against the ISMCTS agent in the web demo" width="560"></p>
 
+## Highlights
+
+- **Search agents beat hand-written rules, at a price.** ISMCTS tops a
+  5,600-game tournament (+410 Elo over random), but the rule-based heuristic is
+  within about 70 Elo at roughly 10,000× less compute per move.
+  [Leaderboard](#leaderboard)
+- **Reinforcement learning, debugged with evidence.** PPO stayed at random-level
+  play until two relational input features were added; tuning then brought it
+  level with the heuristic. [Reinforcement learning](#reinforcement-learning)
+- **A model registry that only promotes real improvements.** Candidates must win
+  a paired sign test against a reference panel. The first, head-to-head design
+  rejected a better model, which the tournament exposed and the panel design
+  fixes. [Experiment tracking](#experiment-tracking-tuning-and-the-model-registry)
+- **Bot detection that survives adaptation.** Timing features catch known bots
+  almost perfectly but only 17% of an unseen bot that copies human pacing;
+  decision features catch 86% of it, so they ship. False positives skew towards
+  novice players, which the model card documents. [Bot detection](#bot-detection)
+- **Production plumbing.** FastAPI with Prometheus/Grafana and PSI drift
+  monitoring, ONNX serving without PyTorch (827 MB image), Kafka real-time
+  scoring with a training/serving parity test, MLflow and Optuna, AWS CDK for
+  ECS Fargate, and CI that tests all of it, including a real broker.
+  [Serving](#serving-and-monitoring)
+
+```mermaid
+flowchart LR
+    engine[Rules engine<br/>immutable, property-tested] --> agents[Agents<br/>heuristic · ISMCTS · alpha-beta · PPO · Claude]
+    agents --> arena[Tournaments<br/>duplicate deals, Bradley-Terry, DuckDB]
+    agents --> rl[PPO training<br/>MLflow · Optuna]
+    rl --> registry[Model registry<br/>significance-gated champion]
+    agents --> sim[Telemetry simulator]
+    sim --> detector[Bot detector<br/>XGBoost · calibration · SHAP]
+    registry --> api[FastAPI service<br/>ONNX · demo · hints]
+    detector --> api
+    detector --> stream[Kafka scorer]
+    api --> mon[Prometheus · Grafana<br/>PSI drift]
+    stream --> mon
+    api --> aws[AWS ECS Fargate<br/>CDK]
+```
+
 ## Quickstart
 
-Play against the agents, with Prometheus and a Grafana dashboard alongside:
+Play against the agents in the browser:
+
+```bash
+docker run -p 8000:8000 ghcr.io/apayne185/brisca-ai:main   # then open http://localhost:8000
+```
+
+Or run the full stack with Prometheus and a Grafana dashboard:
 
 ```bash
 docker compose up --build    # demo and API on :8000, Grafana on :3000
@@ -147,7 +192,7 @@ seats swapped, which cancels most of the luck of the cards. Search agents are
 tested against exact solvers: alpha-beta pruning must match plain minimax, and
 both search agents must play solved endgames optimally. A seeded strength suite
 in CI checks that every agent clearly beats random play. Ratings with confidence
-intervals come in Phase 3.
+intervals are in the [leaderboard](#leaderboard).
 
 ## Reinforcement learning
 
