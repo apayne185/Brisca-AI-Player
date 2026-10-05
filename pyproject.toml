@@ -46,6 +46,9 @@ detect = [
 llm = [
     "anthropic>=1.0",
 ]
+stream = [
+    "confluent-kafka>=2.6",
+]
 serve = [
     "fastapi>=0.115",
     "prometheus-client>=0.21",
