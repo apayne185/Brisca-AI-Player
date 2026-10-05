@@ -260,6 +260,30 @@ is documented as an open issue in the [model card](docs/model-card-bot-detection
 alongside intended use (flag for human review, never auto-ban), limitations and
 the full [evaluation report](docs/bot-detection-report.md).
 
+## Language models
+
+Two uses of Claude (`pip install 'brisca[llm]'`, with Anthropic credentials):
+
+- **An LLM player.** `LLMAgent` describes the position in plain language and
+  asks Claude for a card. The structured-output schema only allows the cards
+  in hand, so the model cannot make an illegal move. Refusals, truncated
+  answers and API errors fall back to the heuristic and are counted, so a
+  benchmark reports how often the model actually decided. It plugs into
+  tournaments like any other agent (`type = "llm"`).
+- **Explained hints.** In the demo, *Hint* runs ISMCTS on your position and
+  shows the recommended card with estimated winning chances. With
+  `BRISCA_LLM_EXPLANATIONS=1`, Claude turns those numbers into a two-sentence
+  explanation. The search does the playing and the language model only
+  explains, so the explanation can't invent analysis the engine didn't do.
+
+```bash
+brisca llm benchmark --opponent heuristic --deals 20          # prints a cost estimate
+brisca llm benchmark --opponent heuristic --deals 20 --yes    # actually runs it
+```
+
+The benchmark tracks token usage and cost per game alongside the score, so an
+LLM player can be compared with the search agents on strength *and* cost.
+
 ## Serving and monitoring
 
 A FastAPI service (`pip install 'brisca[serve]'`, then
@@ -280,8 +304,11 @@ stack provisions this Grafana dashboard automatically:
 
 <p align="center"><img src="docs/images/grafana.png" alt="Grafana dashboard with request rate, latency, agent decision time, bot flags and feature drift panels" width="720"></p>
 
-**Delivery.** The image is a multi-stage uv build with CPU-only PyTorch and
-XGBoost, running as a non-root user with a healthcheck. On every pull request,
+**Delivery.** The PPO policy is exported to ONNX (`brisca-export-onnx`, which
+refuses to write a model whose decisions differ from PyTorch's) and served with
+ONNX Runtime. It plays identically, about twice as fast, and without PyTorch the
+image shrinks from 1.89 GB to 827 MB. The image is a multi-stage uv build with
+CPU-only XGBoost, running as a non-root user with a healthcheck. On every pull request,
 CI builds it and smoke-tests the running container; merges to `main` and
 release tags push it to GitHub Container Registry
 (`ghcr.io/apayne185/brisca-ai`). Demo games live in a bounded in-memory store,
