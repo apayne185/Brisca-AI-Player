@@ -217,6 +217,41 @@ tagged with their evaluation, so every decision can be audited.
   the original settings, so most of the gain is in sample efficiency. Longer
   budgets or multi-fidelity methods such as Hyperband are the next step.
 
+## Bot detection
+
+Online card games attract bots, and in real-money play they are a platform
+security problem. This module builds a detector from gameplay telemetry
+(`pip install 'brisca[rl,detect]'`):
+
+```bash
+brisca detect simulate --players 2000      # synthetic telemetry into DuckDB
+brisca detect train --mlflow               # evaluate, then save models/bot-detector
+```
+
+The data is **synthetic**: simulated humans with varying skill, tempo, fatigue
+and distraction, and bots that run the agents above with four increasingly
+human-like timing styles. Session features are written in SQL. The detector is
+XGBoost with player-grouped cross-validation, isotonic calibration and a
+threshold that flags at most 1% of human sessions. One bot style, `mimic`,
+copies the human timing model exactly and is **held out of training**, to test
+what happens when bots adapt.
+
+| Features | Recall at 1% FPR, known bot styles | Recall, unseen `mimic` bots |
+| --- | ---: | ---: |
+| All | 100.0% | 16.7% |
+| Timing only | 99.6% | 1.8% |
+| **Decision only (shipped)** | 87.6% | **86.2%** |
+
+Timing features are almost perfect against known bots and almost useless once
+a bot copies human pacing; the model had learned to rely on them (think time
+vs stakes was its top SHAP feature). Decision features lose a little on known
+bots but hold up against the adaptive one, so they are what ships. Slicing the
+shipped model shows its false positives fall mostly on **novice** players
+(2.5% vs 0.3–0.5% for others), whose erratic play resembles the PPO bot. That
+is documented as an open issue in the [model card](docs/model-card-bot-detection.md),
+alongside intended use (flag for human review, never auto-ban), limitations and
+the full [evaluation report](docs/bot-detection-report.md).
+
 ## The game
 
 Brisca is played with the 40-card Spanish deck: four suits (oros, copas,
