@@ -32,6 +32,7 @@ from sklearn.model_selection import GroupShuffleSplit, StratifiedGroupKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+from brisca.detection.drift import reference_profile
 from brisca.detection.features import (
     ALL_FEATURES,
     DECISION_FEATURES,
@@ -301,6 +302,10 @@ def evaluate(data: Dataset, seed: int = 0, ship: str = "decision") -> dict[str, 
             for label, (lo, hi) in SKILL_BANDS.items()
         },
     }
-    detector.metadata = {"cv": report["shipped"], "fpr_budget": FPR_BUDGET}
+    detector.metadata = {
+        "cv": {k: v for k, v in report["shipped"].items() if not isinstance(v, dict)},
+        "fpr_budget": FPR_BUDGET,
+        "reference": reference_profile(X[seen], features),
+    }
     report["detector"] = detector
     return report
