@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brisca AI</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Brisca AI</h1>
+    <p class="tagline">Play the Spanish card game against search and reinforcement-learning agents.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="New game">
+      <label for="agent">Opponent</label>
+      <select id="agent"></select>
+      <button id="new-game" type="button">New game</button>
+      <a class="docs" href="/docs">API docs</a>
+    </section>
+
+    <section class="board" aria-live="polite">
+      <div class="status-row">
+        <div class="score"><span class="label">You</span><span id="score-you">0</span></div>
+        <div class="trump">
+          <span class="label">Trump</span>
+          <div id="trump" class="trump-slot"></div>
+          <span id="stock" class="label"></span>
+        </div>
+        <div class="score"><span class="label" id="opponent-name">Opponent</span><span id="score-ai">0</span></div>
+      </div>
+
+      <div class="table">
+        <div>
+          <span class="label">On the table</span>
+          <div id="trick" class="cards"></div>
+        </div>
+        <div>
+          <span class="label">Last trick</span>
+          <div id="last-trick" class="cards"></div>
+          <p id="last-trick-note" class="note"></p>
+        </div>
+      </div>
+
+      <p id="message" class="message">Choose an opponent and start a game.</p>
+
+      <div>
+        <span class="label">Your hand</span>
+        <div id="hand" class="cards hand"></div>
+      </div>
+    </section>
+
+    <details class="rules">
+      <summary>Rules in 30 seconds</summary>
+      <p>Each player holds three cards. The face-up card sets the trump suit. You may play any card:
+        the highest trump wins the trick, otherwise the highest card of the suit that was led.
+        Card order is Ace, Three, King, Knight, Jack, then 7 down to 2. Aces are worth 11, threes 10,
+        kings 4, knights 3 and jacks 2. The trick winner draws first and leads next. More than 60 of
+        the 120 points wins.</p>
+    </details>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
