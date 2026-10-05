@@ -78,9 +78,12 @@ class Settings:
             AgentSpec("ismcts", "ismcts", {"iterations": 500, "seed": 0}),
             AgentSpec("alphabeta", "alphabeta", {"samples": 10, "depth": 4, "seed": 0}),
         ]
-        ppo = self.models_dir / "ppo-v2.pt"
-        if ppo.exists():
-            specs.append(AgentSpec("ppo", "ppo", {"path": str(ppo)}))
+        # Prefer the ONNX export: same decisions, no PyTorch needed at serving time.
+        onnx, checkpoint = self.models_dir / "ppo-v2.onnx", self.models_dir / "ppo-v2.pt"
+        if onnx.exists():
+            specs.append(AgentSpec("ppo", "onnx", {"path": str(onnx)}))
+        elif checkpoint.exists():
+            specs.append(AgentSpec("ppo", "ppo", {"path": str(checkpoint)}))
         return tuple(specs)
 
 

@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # --- Build: resolve the locked environment with uv -------------------------
+# The policy is served through ONNX Runtime, so PyTorch is not installed.
 FROM python:3.12-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
@@ -11,11 +12,11 @@ WORKDIR /app
 # Dependencies first, so code changes don't invalidate this layer.
 COPY pyproject.toml uv.lock README.md LICENSE ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-install-project --extra rl --extra detect --extra serve
+    uv sync --locked --no-dev --no-install-project --extra onnx --extra detect --extra serve
 
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-editable --extra rl --extra detect --extra serve
+    uv sync --locked --no-dev --no-editable --extra onnx --extra detect --extra serve
 
 # --- Runtime: slim image, non-root user ------------------------------------
 FROM python:3.12-slim
