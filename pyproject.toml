@@ -36,7 +36,7 @@ mlops = [
 ]
 detect = [
     "scikit-learn>=1.5",
-    "xgboost>=2.1",
+    "xgboost-cpu>=2.1",  # same module, without the CUDA/NCCL libraries
 ]
 serve = [
     "fastapi>=0.115",
