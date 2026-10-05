@@ -101,6 +101,7 @@ class Detector:
                 },
                 indent=2,
             )
+            + "\n"
         )
 
     @classmethod
