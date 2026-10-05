@@ -68,6 +68,10 @@ def build_agent(spec: AgentSpec) -> Agent:
         from brisca.rl import PolicyAgent
 
         return PolicyAgent.from_checkpoint(**spec.params)
+    if spec.type == "llm":
+        from brisca.llm.agent import LLMAgent
+
+        return LLMAgent(**spec.params)
     return make_agent(spec.type, **spec.params)
 
 

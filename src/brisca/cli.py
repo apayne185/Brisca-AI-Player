@@ -137,6 +137,48 @@ def _detect_train(args: argparse.Namespace) -> None:
             mlflow.log_artifact(str(args.report))
 
 
+def _llm_benchmark(args: argparse.Namespace) -> None:
+    import json
+
+    from brisca.agents import make_agent
+    from brisca.arena import play_match
+    from brisca.llm.agent import PRICES, LLMAgent
+    from brisca.ratings import wilson_interval
+
+    # ~17 non-forced decisions per game; input ~1.2k tokens, output incl. thinking ~0.6k.
+    decisions = args.deals * 2 * 17
+    price_in, price_out = PRICES.get(args.model, (0.0, 0.0))
+    estimate = decisions * (1200 * price_in + 600 * price_out) / 1e6
+    print(
+        f"{args.deals * 2} games vs {args.opponent}, about {decisions} API calls to "
+        f"{args.model} at effort={args.effort}: roughly ${estimate:.2f} (rough estimate)."
+    )
+    if not args.yes:
+        print("Re-run with --yes to spend this.")
+        return
+
+    agent = LLMAgent(model=args.model, effort=args.effort)
+    result = play_match(agent, make_agent(args.opponent), deals=args.deals, seed=args.seed)
+    lo, hi = wilson_interval(result.score, result.games)
+    summary = {
+        "model": args.model,
+        "effort": args.effort,
+        "opponent": args.opponent,
+        "games": result.games,
+        "score": result.score,
+        "score_95ci": [lo, hi],
+        "points_per_game": result.points_for / result.games,
+        "fallback_rate": agent.fallback_rate,
+        "stats": dict(agent.stats),
+        "cost_usd": round(agent.cost_usd(), 4),
+        "cost_per_game_usd": round(agent.cost_usd() / result.games, 4),
+    }
+    print(json.dumps(summary, indent=2))
+    if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(summary, indent=2) + "\n")
+
+
 def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     parser = argparse.ArgumentParser(prog="brisca", description=__doc__)
@@ -198,6 +240,18 @@ def main(argv: list[str] | None = None) -> None:
     )
     fit.add_argument("--mlflow", action="store_true", help="log the run to MLflow")
     fit.set_defaults(func=_detect_train)
+
+    llm = sub.add_parser("llm", help="Claude-powered agent")
+    llm_sub = llm.add_subparsers(required=True)
+    bench = llm_sub.add_parser("benchmark", help="duplicate match: Claude vs a reference agent")
+    bench.add_argument("--opponent", default="heuristic")
+    bench.add_argument("--deals", type=int, default=10)
+    bench.add_argument("--model", default="claude-opus-5-5")
+    bench.add_argument("--effort", choices=["low", "medium", "high", "xhigh", "max"], default="low")
+    bench.add_argument("--seed", type=int, default=0)
+    bench.add_argument("--out", type=Path, default=Path("results/llm-benchmark.json"))
+    bench.add_argument("--yes", action="store_true", help="confirm the API spend")
+    bench.set_defaults(func=_llm_benchmark)
 
     args = parser.parse_args(argv)
     args.func(args)

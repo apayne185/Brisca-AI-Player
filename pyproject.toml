@@ -38,6 +38,9 @@ detect = [
     "scikit-learn>=1.5",
     "xgboost-cpu>=2.1",  # same module, without the CUDA/NCCL libraries
 ]
+llm = [
+    "anthropic>=1.0",
+]
 serve = [
     "fastapi>=0.115",
     "prometheus-client>=0.21",
