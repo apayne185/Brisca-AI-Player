@@ -314,6 +314,39 @@ release tags push it to GitHub Container Registry
 (`ghcr.io/apayne185/brisca-ai`). Demo games live in a bounded in-memory store,
 which is fine for one process; scaling out would move them to Redis.
 
+## Real-time scoring with Kafka
+
+The detector also runs on a live event stream (`pip install 'brisca[stream]'`):
+
+```bash
+docker compose --profile streaming up --build   # adds Redpanda, a live producer and the scorer
+```
+
+The producer publishes per-move, game-end and session-end events, keyed by
+player so each player's events stay ordered. The scorer keeps running
+per-session aggregates, scores each session as it closes and publishes the
+result to `brisca.bot-scores`. Offsets are committed only after results are
+flushed (at-least-once delivery, with idempotent results keyed by session).
+Malformed messages are skipped and counted. Idle sessions close on event time,
+and memory stays bounded. The Grafana dashboard gains a streaming row: events
+per second, sessions scored and flagged, open sessions and the live flag rate.
+
+**No training/serving skew.** Training builds features in SQL over complete
+sessions; streaming builds them incrementally. A test replays the telemetry
+through the stream processor and requires every session's features to equal the
+SQL values exactly, and CI runs a round trip through a real Redpanda broker on
+every pull request.
+
+## Deployment
+
+[`infra/`](infra/) is an AWS CDK app that deploys the image to ECS Fargate
+behind an Application Load Balancer. Traffic goes only to tasks whose `/ready`
+check passes, failed releases roll back automatically, and the service scales
+on CPU and request count. The VPC has public subnets and no NAT gateway, and
+CloudWatch alarms fire on 5xx responses and p95 latency. CDK assertion tests run
+in CI against the synthesized CloudFormation template; nothing is deployed
+automatically. See [infra/README.md](infra/README.md) to deploy or tear down.
+
 ## The game
 
 Brisca is played with the 40-card Spanish deck: four suits (oros, copas,

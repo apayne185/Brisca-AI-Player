@@ -46,6 +46,9 @@ detect = [
 llm = [
     "anthropic>=1.0",
 ]
+stream = [
+    "confluent-kafka>=2.6",
+]
 serve = [
     "fastapi>=0.115",
     "prometheus-client>=0.21",
@@ -111,6 +114,9 @@ select = [
     "C4",       # comprehensions
     "PERF",     # performance anti-patterns
 ]
+
+[tool.ruff.lint.isort]
+known-first-party = ["brisca", "brisca_infra"]
 
 [tool.ruff.lint.per-file-ignores]
 # X for a feature matrix is the standard ML convention.

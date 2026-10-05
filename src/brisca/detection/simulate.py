@@ -23,6 +23,7 @@ from __future__ import annotations
 import csv
 import math
 import multiprocessing
+import os
 import random
 import tempfile
 from collections.abc import Iterator
@@ -175,9 +176,15 @@ def _bot_policy(profile: Profile, seed: int) -> Agent:
         return HeuristicAgent()
     if profile.policy == "ismcts":
         return ISMCTSAgent(iterations=150, seed=seed)
-    from brisca.rl import PolicyAgent
+    models = Path(os.getenv("BRISCA_MODELS_DIR", "models"))
+    try:
+        from brisca.rl import PolicyAgent
 
-    return PolicyAgent.from_checkpoint("models/ppo-v2.pt")
+        return PolicyAgent.from_checkpoint(models / "ppo-v2.pt")
+    except ImportError:  # slim serving image: same policy through ONNX Runtime
+        from brisca.onnx_policy import OnnxPolicyAgent
+
+        return OnnxPolicyAgent(models / "ppo-v2.onnx")
 
 
 def simulate_player(profile: Profile, seed: int) -> tuple[list[MoveEvent], list[GameEvent]]:

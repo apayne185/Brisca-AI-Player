@@ -179,6 +179,43 @@ def _llm_benchmark(args: argparse.Namespace) -> None:
         args.out.write_text(json.dumps(summary, indent=2) + "\n")
 
 
+def _stream_produce(args: argparse.Namespace) -> None:
+    from brisca import streaming
+
+    streaming.ensure_topics(args.bootstrap, [args.topic])
+    events = (
+        streaming.events_from_db(args.db)
+        if args.db
+        else streaming.live_events(bot_rate=args.bot_rate, seed=args.seed)
+    )
+    sent = streaming.produce(
+        events, streaming.kafka_producer(args.bootstrap), args.topic, args.rate, args.limit
+    )
+    log.info("produced %d events to %s", sent, args.topic)
+
+
+def _stream_score(args: argparse.Namespace) -> None:
+    from prometheus_client import REGISTRY, start_http_server
+
+    from brisca import streaming
+    from brisca.detection.model import Detector
+
+    streaming.ensure_topics(args.bootstrap, [args.topic, args.out_topic])
+    scorer = streaming.Scorer(
+        Detector.load(args.model),
+        streaming.kafka_producer(args.bootstrap),
+        out_topic=args.out_topic,
+        registry=REGISTRY,
+    )
+    start_http_server(args.metrics_port)
+    consumer = streaming.kafka_consumer(args.bootstrap, args.topic, args.group)
+    log.info("scoring %s -> %s (metrics on :%d)", args.topic, args.out_topic, args.metrics_port)
+    try:
+        scorer.run(consumer)
+    finally:
+        consumer.close()
+
+
 def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     parser = argparse.ArgumentParser(prog="brisca", description=__doc__)
@@ -252,6 +289,28 @@ def main(argv: list[str] | None = None) -> None:
     bench.add_argument("--out", type=Path, default=Path("results/llm-benchmark.json"))
     bench.add_argument("--yes", action="store_true", help="confirm the API spend")
     bench.set_defaults(func=_llm_benchmark)
+
+    stream = sub.add_parser("stream", help="real-time bot scoring over Kafka")
+    stream_sub = stream.add_subparsers(required=True)
+    prod = stream_sub.add_parser("produce", help="publish gameplay events")
+    prod.add_argument("--bootstrap", default="localhost:19092")
+    prod.add_argument("--topic", default="brisca.events")
+    prod.add_argument(
+        "--db", type=Path, default=None, help="replay telemetry instead of simulating"
+    )
+    prod.add_argument("--rate", type=float, default=200.0, help="events per second (0: unpaced)")
+    prod.add_argument("--limit", type=int, default=None)
+    prod.add_argument("--bot-rate", type=float, default=0.15)
+    prod.add_argument("--seed", type=int, default=0)
+    prod.set_defaults(func=_stream_produce)
+    score = stream_sub.add_parser("score", help="consume events and publish bot scores")
+    score.add_argument("--bootstrap", default="localhost:19092")
+    score.add_argument("--topic", default="brisca.events")
+    score.add_argument("--out-topic", default="brisca.bot-scores")
+    score.add_argument("--group", default="bot-scorer")
+    score.add_argument("--model", type=Path, default=Path("models/bot-detector"))
+    score.add_argument("--metrics-port", type=int, default=9100)
+    score.set_defaults(func=_stream_score)
 
     args = parser.parse_args(argv)
     args.func(args)

@@ -1,6 +1,9 @@
 # Local stack: the API, Prometheus scraping it, and a provisioned Grafana dashboard.
 #   docker compose up --build
 #   API and demo  http://localhost:8000      Grafana  http://localhost:3000
+#
+# Add real-time bot scoring (Redpanda + a live event producer + the scorer):
+#   docker compose --profile streaming up --build
 services:
   api:
     build: .
@@ -27,3 +30,37 @@ services:
       - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports: ["3000:3000"]
     depends_on: [prometheus]
+
+  redpanda:
+    image: redpandadata/redpanda:v24.3.1
+    profiles: [streaming]
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+    ports: ["19092:19092"]
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true'"]
+      interval: 5s
+      retries: 30
+
+  producer:
+    image: ghcr.io/apayne185/brisca-ai:local
+    profiles: [streaming]
+    command: ["brisca", "stream", "produce", "--bootstrap", "redpanda:9092", "--rate", "300"]
+    depends_on:
+      redpanda: {condition: service_healthy}
+      api: {condition: service_started}  # builds the shared image
+    restart: unless-stopped
+
+  scorer:
+    image: ghcr.io/apayne185/brisca-ai:local
+    profiles: [streaming]
+    command: ["brisca", "stream", "score", "--bootstrap", "redpanda:9092"]
+    depends_on:
+      redpanda: {condition: service_healthy}
+      api: {condition: service_started}
+    restart: unless-stopped
