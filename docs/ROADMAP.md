@@ -14,7 +14,7 @@ service, and a gameplay-telemetry bot-detection model.
 | 4 | Training pipelines: MLflow tracking and registry with a significance-gated champion, Optuna tuning, TOML configs | Done |
 | 5 | Bot detection: synthetic telemetry, SQL features, XGBoost with grouped CV, calibration, SHAP, unseen-adversary test, model card | Done |
 | 6 | Serving: FastAPI inference, Docker, playable web demo, Prometheus/Grafana monitoring, PSI drift, image CI/CD to GHCR | Done |
-| 7 | Stretch: LLM move explanations and LLM-agent benchmark, Kafka event streaming, AWS IaC, ONNX serving without PyTorch | Next |
+| 7 | Claude-powered player and explained hints, Kafka real-time scoring with a skew test, AWS CDK for ECS Fargate, ONNX serving without PyTorch | Done (LLM benchmark not run: it needs paid API calls) |
 
 ## Principles
 
