@@ -101,6 +101,40 @@ def _promote(args: argparse.Namespace) -> None:
     print(f"v{decision.version} promoted={decision.promoted}: {decision.reason}")
 
 
+def _detect_simulate(args: argparse.Namespace) -> None:
+    from brisca.detection.simulate import simulate_population
+
+    summary = simulate_population(
+        args.db, players=args.players, bot_rate=args.bot_rate, seed=args.seed, workers=args.workers
+    )
+    log.info("simulated %s into %s", summary, args.db)
+
+
+def _detect_train(args: argparse.Namespace) -> None:
+    from brisca.detection.features import load_dataset
+    from brisca.detection.model import evaluate
+    from brisca.detection.report import render
+
+    report = evaluate(load_dataset(args.db), seed=args.seed)
+    detector = report.pop("detector")
+    detector.save(args.model)
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(render(report))
+    log.info("saved detector to %s and report to %s", args.model, args.report)
+    if args.mlflow:
+        import mlflow
+
+        from brisca.mlops.tracking import configure, git_tags
+
+        configure("bot-detection")
+        with mlflow.start_run(tags=git_tags()):
+            mlflow.log_params({"db": str(args.db), "seed": args.seed})
+            mlflow.log_metrics(report["main"])
+            mlflow.log_metrics({f"recall_{k}": v for k, v in report["recall_by_style"].items()})
+            mlflow.log_artifacts(str(args.model), artifact_path="detector")
+            mlflow.log_artifact(str(args.report))
+
+
 def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     parser = argparse.ArgumentParser(prog="brisca", description=__doc__)
@@ -139,6 +173,23 @@ def main(argv: list[str] | None = None) -> None:
     prom.add_argument("--deals", type=int, default=300)
     prom.add_argument("--alpha", type=float, default=0.05)
     prom.set_defaults(func=_promote)
+
+    detect = sub.add_parser("detect", help="bot detection from gameplay telemetry")
+    detect_sub = detect.add_subparsers(required=True)
+    sim = detect_sub.add_parser("simulate", help="simulate a population's telemetry")
+    sim.add_argument("--players", type=int, default=2000)
+    sim.add_argument("--bot-rate", type=float, default=0.15)
+    sim.add_argument("--db", type=Path, default=Path("data/telemetry.duckdb"))
+    sim.add_argument("--seed", type=int, default=0)
+    sim.add_argument("--workers", type=int, default=None)
+    sim.set_defaults(func=_detect_simulate)
+    fit = detect_sub.add_parser("train", help="evaluate, then fit and save the detector")
+    fit.add_argument("--db", type=Path, default=Path("data/telemetry.duckdb"))
+    fit.add_argument("--model", type=Path, default=Path("models/bot-detector"))
+    fit.add_argument("--report", type=Path, default=Path("docs/bot-detection-report.md"))
+    fit.add_argument("--seed", type=int, default=0)
+    fit.add_argument("--mlflow", action="store_true", help="log the run to MLflow")
+    fit.set_defaults(func=_detect_train)
 
     args = parser.parse_args(argv)
     args.func(args)
