@@ -42,7 +42,10 @@ from brisca.detection.features import (
 
 HELD_OUT_STYLE = "mimic"
 FPR_BUDGET = 0.01
-ABLATIONS = {"timing only": TIMING_FEATURES, "decision only": DECISION_FEATURES}
+ABLATIONS = {
+    "timing only": TIMING_FEATURES,
+    "decision only": DECISION_FEATURES,
+}
 SKILL_BANDS = {"novice (<0.33)": (0.0, 0.33), "mid": (0.33, 0.67), "expert (>0.67)": (0.67, 1.01)}
 
 XGB_PARAMS: dict[str, Any] = {
@@ -193,6 +196,19 @@ def _logistic_oof(data: Dataset, seed: int) -> FloatArray:
     return scores
 
 
+def _seen_and_unseen(raw: FloatArray, data: Dataset) -> dict[str, float]:
+    """Ranking metrics on trained-on styles, plus recall on the held-out style.
+
+    Both use the threshold that meets the false-positive budget on humans.
+    """
+    seen = data.bot_style != HELD_OUT_STYLE
+    threshold = threshold_for_fpr(raw[seen], data.y[seen])
+    return {
+        **ranking_metrics(raw[seen], data.y[seen]),
+        "unseen_recall": float(np.mean(raw[data.bot_style == HELD_OUT_STYLE] > threshold)),
+    }
+
+
 def reliability(probs: FloatArray, y: npt.NDArray[np.int64], bins: int = 5) -> list[dict[str, Any]]:
     """Mean predicted vs observed bot rate in equal-width probability bins."""
     edges = np.linspace(0, 1, bins + 1)
@@ -211,8 +227,16 @@ def reliability(probs: FloatArray, y: npt.NDArray[np.int64], bins: int = 5) -> l
     return rows
 
 
-def evaluate(data: Dataset, seed: int = 0) -> dict[str, Any]:
-    """The full evaluation behind the report and the model card."""
+FEATURE_SETS = {"all": ALL_FEATURES, "timing": TIMING_FEATURES, "decision": DECISION_FEATURES}
+
+
+def evaluate(data: Dataset, seed: int = 0, ship: str = "decision") -> dict[str, Any]:
+    """The full evaluation behind the report and the model card.
+
+    Diagnostics (slices, calibration, SHAP) describe the all-features model.
+    The returned ``detector`` uses the ``ship`` feature set, by default
+    decision features only, which hold up against the unseen adversary.
+    """
     seen = data.bot_style != HELD_OUT_STYLE
     main = cross_validate(data, ALL_FEATURES, seed=seed)
     y_seen = data.y[seen]
@@ -225,18 +249,15 @@ def evaluate(data: Dataset, seed: int = 0) -> dict[str, Any]:
         "players": len(np.unique(data.groups)),
         "bot_share": float(data.y.mean()),
         "main": {
-            **ranking_metrics(raw_seen, y_seen),
+            **_seen_and_unseen(main.raw, data),
             "brier_raw": float(brier_score_loss(y_seen, raw_seen)),
             "brier_calibrated": float(brier_score_loss(y_seen, main.calibrated[seen])),
         },
         "ablations": {
-            name: ranking_metrics(cross_validate(data, feats, seed=seed).raw[seen], y_seen)
-            for name, feats in (
-                ("timing only", TIMING_FEATURES),
-                ("decision only", DECISION_FEATURES),
-            )
+            name: _seen_and_unseen(cross_validate(data, feats, seed=seed).raw, data)
+            for name, feats in ABLATIONS.items()
         },
-        "logistic_baseline": ranking_metrics(_logistic_oof(data, seed)[seen], y_seen),
+        "logistic_baseline": _seen_and_unseen(_logistic_oof(data, seed), data),
         "recall_by_style": {
             style: float(flagged[data.bot_style == style].mean())
             for style in sorted(set(data.bot_style) - {"human"})
@@ -249,20 +270,36 @@ def evaluate(data: Dataset, seed: int = 0) -> dict[str, Any]:
         "reliability": reliability(main.calibrated[seen], y_seen),
     }
     humans = data.bot_style == "human"
-    for label, lo, hi in (
-        ("novice (<0.33)", 0, 0.33),
-        ("mid", 0.33, 0.67),
-        ("expert (>0.67)", 0.67, 1.01),
-    ):
+    for label, (lo, hi) in SKILL_BANDS.items():
         in_band = humans & (data.skill >= lo) & (data.skill < hi)
         report["human_fpr_by_skill"][label] = float(flagged[in_band].mean())
 
-    detector = fit_detector(data.X[seen], data.y[seen], data.groups[seen], data.features, seed=seed)
-    detector.threshold = threshold
-    shap = np.abs(detector.explain(data.X[seen])).mean(axis=0)
+    diagnostic = fit_detector(
+        data.X[seen], data.y[seen], data.groups[seen], data.features, seed=seed
+    )
+    shap = np.abs(diagnostic.explain(data.X[seen])).mean(axis=0)
     report["feature_importance"] = dict(
         sorted(zip(data.features, map(float, shap), strict=True), key=lambda kv: -kv[1])
     )
-    detector.metadata = {"cv": report["main"], "fpr_budget": FPR_BUDGET}
+
+    features = FEATURE_SETS[ship]
+    shipped_oof = main if ship == "all" else cross_validate(data, features, seed=seed)
+    X = data.select(features)
+    detector = fit_detector(X[seen], data.y[seen], data.groups[seen], features, seed=seed)
+    detector.threshold = threshold_for_fpr(shipped_oof.raw[seen], y_seen)
+    shipped_flagged = shipped_oof.raw > detector.threshold
+    report["shipped"] = {
+        "features": ship,
+        **_seen_and_unseen(shipped_oof.raw, data),
+        "recall_by_policy": {
+            policy: float(shipped_flagged[data.policy == policy].mean())
+            for policy in sorted(set(data.policy) - {"human"})
+        },
+        "human_fpr_by_skill": {
+            label: float(shipped_flagged[humans & (data.skill >= lo) & (data.skill < hi)].mean())
+            for label, (lo, hi) in SKILL_BANDS.items()
+        },
+    }
+    detector.metadata = {"cv": report["shipped"], "fpr_budget": FPR_BUDGET}
     report["detector"] = detector
     return report

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from brisca.cli import main
-from brisca.detection.features import ALL_FEATURES, load_dataset
+from brisca.detection.features import ALL_FEATURES, DECISION_FEATURES, load_dataset
 from brisca.detection.model import (
     HELD_OUT_STYLE,
     Detector,
@@ -58,7 +58,10 @@ def test_detector_round_trips(telemetry_db: Path, tmp_path: Path) -> None:
 
 def test_evaluation_report(telemetry_db: Path) -> None:
     report = evaluate(load_dataset(telemetry_db))
-    assert isinstance(report.pop("detector"), Detector)
+    detector = report.pop("detector")
+    assert isinstance(detector, Detector)
+    assert detector.features == DECISION_FEATURES
+    assert report["shipped"]["features"] == "decision"
     assert 0.5 < report["main"]["roc_auc"] <= 1.0
     assert set(report["ablations"]) == {"timing only", "decision only"}
     assert HELD_OUT_STYLE in report["recall_by_style"]

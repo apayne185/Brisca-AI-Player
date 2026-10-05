@@ -25,10 +25,13 @@ def render(report: dict[str, Any]) -> str:
         f"{_pct(FPR_BUDGET)} of human sessions",
         f"- `{HELD_OUT_STYLE}` bots are never trained on (unseen-adversary test)",
         "",
-        "## Headline metrics (bot styles seen in training)",
+        "## Headline metrics",
         "",
-        "| Model | ROC-AUC | PR-AUC | Recall at 1% FPR |",
-        "| --- | ---: | ---: | ---: |",
+        "ROC-AUC, PR-AUC and recall are on bot styles seen in training; the last column "
+        f"is recall on `{HELD_OUT_STYLE}` bots at the same 1% FPR threshold.",
+        "",
+        f"| Model | ROC-AUC | PR-AUC | Recall at 1% FPR | Recall, unseen `{HELD_OUT_STYLE}` |",
+        "| --- | ---: | ---: | ---: | ---: |",
     ]
     rows = {
         "XGBoost, all features": main,
@@ -36,11 +39,19 @@ def render(report: dict[str, Any]) -> str:
         "Logistic regression, all features": report["logistic_baseline"],
     }
     for name, m in rows.items():
+        unseen = _pct(m["unseen_recall"]) if "unseen_recall" in m else "-"
         lines.append(
-            f"| {name} | {m['roc_auc']:.3f} | {m['pr_auc']:.3f} | {_pct(m['recall_at_1pct_fpr'])} |"
+            f"| {name} | {m['roc_auc']:.3f} | {m['pr_auc']:.3f} "
+            f"| {_pct(m['recall_at_1pct_fpr'])} | {unseen} |"
         )
 
+    shipped = report["shipped"]
     lines += [
+        "",
+        f"**Shipped detector: `{shipped['features']}` features**, "
+        f"{_pct(shipped['recall_at_1pct_fpr'])} recall on seen styles and "
+        f"{_pct(shipped['unseen_recall'])} on unseen `{HELD_OUT_STYLE}` bots at 1% FPR. "
+        "The sections below describe the all-features model, except where marked.",
         "",
         f"Brier score: {main['brier_raw']:.4f} raw, {main['brier_calibrated']:.4f} after "
         "isotonic calibration.",
@@ -66,6 +77,22 @@ def render(report: dict[str, Any]) -> str:
     ]
     for band, fpr in report["human_fpr_by_skill"].items():
         lines.append(f"| {band} | {_pct(fpr)} |")
+
+    lines += [
+        "",
+        f"## Shipped detector (`{shipped['features']}` features): slices",
+        "",
+        "Decision features describe how someone plays, so false positives can concentrate "
+        "on humans whose play is unusual, at either end of the skill range.",
+        "",
+        "| Human skill | Sessions wrongly flagged |",
+        "| --- | ---: |",
+    ]
+    for band, fpr in shipped["human_fpr_by_skill"].items():
+        lines.append(f"| {band} | {_pct(fpr)} |")
+    lines += ["", "| Bot policy | Recall (all styles) |", "| --- | ---: |"]
+    for policy, recall in shipped["recall_by_policy"].items():
+        lines.append(f"| `{policy}` | {_pct(recall)} |")
 
     lines += [
         "",

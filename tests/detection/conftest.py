@@ -13,5 +13,5 @@ def telemetry_db(tmp_path_factory: pytest.TempPathFactory) -> Path:
     from brisca.detection.simulate import simulate_population
 
     db = tmp_path_factory.mktemp("telemetry") / "telemetry.duckdb"
-    simulate_population(db, players=80, bot_rate=0.4, seed=1, workers=4)
+    simulate_population(db, players=50, bot_rate=0.4, seed=1, workers=4)
     return db

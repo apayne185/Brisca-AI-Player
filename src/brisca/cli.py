@@ -115,7 +115,7 @@ def _detect_train(args: argparse.Namespace) -> None:
     from brisca.detection.model import evaluate
     from brisca.detection.report import render
 
-    report = evaluate(load_dataset(args.db), seed=args.seed)
+    report = evaluate(load_dataset(args.db), seed=args.seed, ship=args.features)
     detector = report.pop("detector")
     detector.save(args.model)
     args.report.parent.mkdir(parents=True, exist_ok=True)
@@ -128,8 +128,10 @@ def _detect_train(args: argparse.Namespace) -> None:
 
         configure("bot-detection")
         with mlflow.start_run(tags=git_tags()):
-            mlflow.log_params({"db": str(args.db), "seed": args.seed})
+            mlflow.log_params({"db": str(args.db), "seed": args.seed, "features": args.features})
             mlflow.log_metrics(report["main"])
+            shipped = {k: v for k, v in report["shipped"].items() if isinstance(v, float)}
+            mlflow.log_metrics({f"shipped_{k}": v for k, v in shipped.items()})
             mlflow.log_metrics({f"recall_{k}": v for k, v in report["recall_by_style"].items()})
             mlflow.log_artifacts(str(args.model), artifact_path="detector")
             mlflow.log_artifact(str(args.report))
@@ -188,6 +190,12 @@ def main(argv: list[str] | None = None) -> None:
     fit.add_argument("--model", type=Path, default=Path("models/bot-detector"))
     fit.add_argument("--report", type=Path, default=Path("docs/bot-detection-report.md"))
     fit.add_argument("--seed", type=int, default=0)
+    fit.add_argument(
+        "--features",
+        choices=["decision", "timing", "all"],
+        default="decision",
+        help="feature set of the saved detector (default: robust decision features)",
+    )
     fit.add_argument("--mlflow", action="store_true", help="log the run to MLflow")
     fit.set_defaults(func=_detect_train)
 

@@ -81,8 +81,8 @@ def test_population_tables(telemetry_db: Path) -> None:
     with duckdb.connect(str(telemetry_db), read_only=True) as con:
         players = con.sql("SELECT count(*), sum(is_bot::INT) FROM players").fetchone()
         assert players is not None
-        assert players[0] == 80
-        assert 0 < players[1] < 80
+        assert players[0] == 50
+        assert 0 < players[1] < 50
         orphans = con.sql(
             "SELECT count(*) FROM moves m ANTI JOIN games g USING (player_id, game_id)"
         ).fetchone()
