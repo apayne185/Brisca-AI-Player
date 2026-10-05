@@ -19,6 +19,7 @@ const AGENT_LABELS = {
 const $ = (id) => document.getElementById(id);
 let game = null;
 let busy = false;
+let suggested = null;
 
 function parseCard(text) {
   return { rank: Number(text.slice(0, -1)), suit: text.slice(-1) };
@@ -76,10 +77,13 @@ function render() {
   const hand = $("hand");
   hand.classList.toggle("disabled", !game.your_turn || busy);
   hand.replaceChildren(
-    ...game.hand.map((c) =>
-      cardElement(c, { onClick: game.your_turn && !busy ? () => play(c) : null })
-    )
+    ...game.hand.map((c) => {
+      const el = cardElement(c, { onClick: game.your_turn && !busy ? () => play(c) : null });
+      el.classList.toggle("suggested", c === suggested);
+      return el;
+    })
   );
+  $("hint").disabled = !game.your_turn || busy;
 
   if (game.finished) {
     const verdict = { win: "You win!", loss: `${opponent} wins.`, draw: "A 60-60 draw." }[game.result];
@@ -93,7 +97,54 @@ function render() {
   }
 }
 
+function cardLabel(text) {
+  const { rank, suit } = parseCard(text);
+  return `${RANK_NAMES[rank] || rank} de ${SUITS[suit].name}`;
+}
+
+async function showHint() {
+  const panel = $("hint-panel");
+  panel.hidden = false;
+  panel.textContent = "Analysing the position...";
+  $("hint").disabled = true;
+  try {
+    const hint = await api(`/v1/games/${game.game_id}/hint`, {});
+    suggested = hint.card;
+    const odds = hint.moves
+      .map((m) => `${cardLabel(m.card)} ${Math.round(100 * m.win_chance)}%`)
+      .join(" · ");
+    panel.replaceChildren();
+    const chances = hint.moves.map((m) => m.win_chance);
+    // The engine recommends its most-explored move; when estimates are this close,
+    // the ranking is within its margin of error, so say so.
+    const close = Math.max(...chances) - Math.min(...chances) < 0.05;
+    const lead = document.createElement("p");
+    lead.textContent = `Suggested: ${cardLabel(hint.card)}.` +
+      (close ? " It's a close call: every option gives similar chances." : "");
+    panel.append(lead);
+    if (hint.explanation) {
+      const why = document.createElement("p");
+      why.textContent = hint.explanation;
+      panel.append(why);
+    }
+    const detail = document.createElement("p");
+    detail.className = "odds";
+    detail.textContent = `Estimated chance of winning the game: ${odds}`;
+    panel.append(detail);
+  } catch (error) {
+    panel.textContent = error.message;
+  } finally {
+    render();
+  }
+}
+
+function clearHint() {
+  suggested = null;
+  $("hint-panel").hidden = true;
+}
+
 async function play(card) {
+  clearHint();
   busy = true;
   render();
   try {
@@ -107,6 +158,7 @@ async function play(card) {
 }
 
 async function newGame() {
+  clearHint();
   busy = true;
   $("new-game").disabled = true;
   try {
@@ -126,6 +178,7 @@ async function init() {
     ...agents.map((a) => new Option(AGENT_LABELS[a.id] || a.id, a.id, false, a.id === "ismcts"))
   );
   $("new-game").addEventListener("click", newGame);
+  $("hint").addEventListener("click", showHint);
   await newGame();
 }
 

@@ -19,6 +19,14 @@ from brisca.engine import GameState, Seed, make_rng, returns, step
 from brisca.observation import Observation, determinize, observe
 
 
+@dataclass(frozen=True, slots=True)
+class MoveStats:
+    card: Card
+    visits: int
+    value: float
+    """Mean reward for the player choosing this card: 1 win, 0.5 draw, 0 loss."""
+
+
 @dataclass(eq=False, slots=True)
 class _Node:
     parent: _Node | None = None
@@ -62,7 +70,10 @@ class ISMCTSAgent:
     def act(self, obs: Observation) -> Card:
         if len(obs.hand) == 1:
             return obs.hand[0]
+        return max(self.search(obs), key=lambda s: s.visits).card
 
+    def search(self, obs: Observation) -> list[MoveStats]:
+        """Run the search and return statistics for every card in hand, best first."""
         root = _Node()
         for _ in range(self.iterations):
             state = determinize(obs, self._rng)
@@ -70,9 +81,12 @@ class ISMCTSAgent:
             final = self._rollout(state)
             self._backpropagate(node, final)
 
-        best = max(root.children.values(), key=lambda n: n.visits)
-        assert best.move is not None
-        return best.move
+        stats = [
+            MoveStats(card, child.visits, child.reward / child.visits)
+            for card, child in root.children.items()
+            if child.visits
+        ]
+        return sorted(stats, key=lambda s: -s.visits)
 
     def _select_and_expand(self, node: _Node, state: GameState) -> tuple[_Node, GameState]:
         while not state.is_terminal:

@@ -132,3 +132,16 @@ class GameView(BaseModel):
 
 class MoveIn(BaseModel):
     card: CardStr
+
+
+class MoveAdvice(BaseModel):
+    card: CardStr
+    win_chance: float
+    """Estimated probability of winning the game after playing this card."""
+
+
+class Hint(BaseModel):
+    card: CardStr
+    moves: list[MoveAdvice]
+    explanation: str | None
+    """Plain-language reasoning from Claude, when LLM explanations are enabled."""

@@ -162,3 +162,25 @@ def test_store_evicts_oldest_games() -> None:
     assert len(store) == 2
     assert store.get(ids[0]) is None
     assert store.get(ids[2]) is not None
+
+
+def test_hint_recommends_a_card_from_the_hand(client: TestClient) -> None:
+    game = client.post("/v1/games", json={"agent": "heuristic", "seed": 11}).json()
+    hint = client.post(f"/v1/games/{game['game_id']}/hint").json()
+    assert hint["card"] in game["hand"]
+    assert {m["card"] for m in hint["moves"]} == set(game["hand"])
+    assert all(0 <= m["win_chance"] <= 1 for m in hint["moves"])
+    assert hint["explanation"] is None, "LLM explanations are off by default"
+    assert client.post("/v1/games/missing/hint").status_code == 404
+
+
+def test_hint_explanation_comes_from_claude_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("anthropic")
+    import brisca.llm.explain
+
+    monkeypatch.setattr(brisca.llm.explain, "explain", lambda obs, moves: "Save your trump.")
+    settings = Settings(models_dir=MODELS, llm_explanations=True, hint_iterations=100)
+    with TestClient(create_app(settings)) as client:
+        game = client.post("/v1/games", json={"agent": "greedy", "seed": 4}).json()
+        hint = client.post(f"/v1/games/{game['game_id']}/hint").json()
+        assert hint["explanation"] == "Save your trump."

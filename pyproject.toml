@@ -28,7 +28,12 @@ dependencies = [
 
 [project.optional-dependencies]
 rl = [
+    "onnx>=1.17",
+    "onnxscript>=0.2",
     "torch>=2.4",
+]
+onnx = [
+    "onnxruntime>=1.20",
 ]
 mlops = [
     "mlflow>=3.0",
@@ -37,6 +42,9 @@ mlops = [
 detect = [
     "scikit-learn>=1.5",
     "xgboost-cpu>=2.1",  # same module, without the CUDA/NCCL libraries
+]
+llm = [
+    "anthropic>=1.0",
 ]
 serve = [
     "fastapi>=0.115",
@@ -47,6 +55,7 @@ serve = [
 [project.scripts]
 brisca = "brisca.cli:main"
 brisca-train = "brisca.rl.train:main"
+brisca-export-onnx = "brisca.rl.export:main"
 
 [project.urls]
 Repository = "https://github.com/apayne185/Brisca-AI-Player"
@@ -120,7 +129,7 @@ module = ["brisca.rl.*", "tests.rl.*"]
 disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*"]
+module = ["sklearn.*", "onnxruntime.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -143,6 +152,7 @@ filterwarnings = [
     # Raised inside MLflow itself (schema nags, its SQLAlchemy usage), not by our code.
     "ignore::UserWarning:mlflow.*",
     "ignore::DeprecationWarning:mlflow.*",
+    "ignore::UserWarning:torch.onnx.*",
 ]
 
 [tool.coverage.run]

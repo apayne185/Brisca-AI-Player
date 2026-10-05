@@ -26,6 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from brisca.agents.base import Agent
+from brisca.agents.ismcts import ISMCTSAgent
 from brisca.cards import Card
 from brisca.engine import GameState, IllegalActionError, new_game, step, winner
 from brisca.observation import observe
@@ -36,6 +37,8 @@ from brisca.serving.schemas import (
     BotScoreResponse,
     Contribution,
     GameView,
+    Hint,
+    MoveAdvice,
     MoveIn,
     MoveRequest,
     MoveResponse,
@@ -59,6 +62,11 @@ class Settings:
     drift_window: int = field(default_factory=lambda: int(os.getenv("BRISCA_DRIFT_WINDOW", "500")))
     drift_every: int = 50
     """Recompute PSI after this many scored sessions."""
+    llm_explanations: bool = field(
+        default_factory=lambda: os.getenv("BRISCA_LLM_EXPLANATIONS", "") == "1"
+    )
+    """Ask Claude to explain hints (needs the 'llm' extra and Anthropic credentials)."""
+    hint_iterations: int = 1500
 
     def agent_specs(self) -> tuple[AgentSpec, ...]:
         if self.agents_config is not None:
@@ -70,9 +78,12 @@ class Settings:
             AgentSpec("ismcts", "ismcts", {"iterations": 500, "seed": 0}),
             AgentSpec("alphabeta", "alphabeta", {"samples": 10, "depth": 4, "seed": 0}),
         ]
-        ppo = self.models_dir / "ppo-v2.pt"
-        if ppo.exists():
-            specs.append(AgentSpec("ppo", "ppo", {"path": str(ppo)}))
+        # Prefer the ONNX export: same decisions, no PyTorch needed at serving time.
+        onnx, checkpoint = self.models_dir / "ppo-v2.onnx", self.models_dir / "ppo-v2.pt"
+        if onnx.exists():
+            specs.append(AgentSpec("ppo", "onnx", {"path": str(onnx)}))
+        elif checkpoint.exists():
+            specs.append(AgentSpec("ppo", "ppo", {"path": str(checkpoint)}))
         return tuple(specs)
 
 
@@ -298,6 +309,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if state.is_terminal:
             service.metrics.games.labels("finished", game.agent_id).inc()
         return view(game_id, state, game.agent_id)
+
+    @app.post("/v1/games/{game_id}/hint", tags=["demo"])
+    def game_hint(game_id: str) -> Hint:
+        """The engine's recommended card, its win estimates and (optionally) an explanation."""
+        game = service.games.get(game_id)
+        if game is None:
+            raise HTTPException(404, "game not found or expired")
+        if game.state.to_play != HUMAN or game.state.is_terminal:
+            raise HTTPException(409, "it is not your turn")
+        obs = observe(game.state, HUMAN)
+        moves = ISMCTSAgent(iterations=service.settings.hint_iterations).search(obs)
+        explanation = None
+        if service.settings.llm_explanations:
+            try:
+                from brisca.llm.explain import explain
+
+                explanation = explain(obs, moves)
+            except Exception:  # an explanation is optional; never fail the hint
+                log.exception("hint explanation failed")
+        return Hint(
+            card=str(moves[0].card),
+            moves=[MoveAdvice(card=str(m.card), win_chance=m.value) for m in moves],
+            explanation=explanation,
+        )
 
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
