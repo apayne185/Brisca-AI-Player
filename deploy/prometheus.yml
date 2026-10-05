@@ -5,3 +5,7 @@ scrape_configs:
   - job_name: brisca-api
     static_configs:
       - targets: ["api:8000"]
+
+  - job_name: brisca-scorer  # only up with the 'streaming' compose profile
+    static_configs:
+      - targets: ["scorer:9100"]

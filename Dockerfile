@@ -12,11 +12,11 @@ WORKDIR /app
 # Dependencies first, so code changes don't invalidate this layer.
 COPY pyproject.toml uv.lock README.md LICENSE ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-install-project --extra onnx --extra detect --extra serve
+    uv sync --locked --no-dev --no-install-project --extra onnx --extra detect --extra serve --extra stream
 
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-editable --extra onnx --extra detect --extra serve
+    uv sync --locked --no-dev --no-editable --extra onnx --extra detect --extra serve --extra stream
 
 # --- Runtime: slim image, non-root user ------------------------------------
 FROM python:3.12-slim
