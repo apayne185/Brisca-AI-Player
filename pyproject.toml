@@ -34,6 +34,10 @@ mlops = [
     "mlflow>=3.0",
     "optuna>=4.0",
 ]
+detect = [
+    "scikit-learn>=1.5",
+    "xgboost>=2.1",
+]
 
 [project.scripts]
 brisca = "brisca.cli:main"
@@ -93,6 +97,11 @@ select = [
     "PERF",     # performance anti-patterns
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# X for a feature matrix is the standard ML convention.
+"src/brisca/detection/*" = ["N803", "N806"]
+"tests/detection/*" = ["N803", "N806"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true
@@ -103,6 +112,10 @@ files = ["src", "tests"]
 # torch.distributions and Tensor.split are not fully annotated.
 module = ["brisca.rl.*", "tests.rl.*"]
 disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
